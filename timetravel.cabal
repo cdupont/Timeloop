@@ -1,11 +1,4 @@
 cabal-version: 1.12
-
--- This file has been generated from package.yaml by hpack version 0.33.0.
---
--- see: https://github.com/sol/hpack
---
--- hash: 7a332404052a5c8e2ee2b840aeb33c41da53caa12778bfbf4e054a780d2f5bc7
-
 name:           timetravel
 version:        0.1.0.0
 description:    Please see the README on GitHub at <https://github.com/githubuser/timetravel#readme>
@@ -48,6 +41,8 @@ executable timetravel-exe
     , containers -any
     , timetravel
     , fgl
+  --  , reanimate >= 1.1.3.1
+  --  , diagrams
   default-language: Haskell2010
 
 test-suite timetravel-test
