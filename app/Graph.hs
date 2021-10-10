@@ -9,6 +9,7 @@ import Lib
 import Data.Graph
 import Data.Graph.Inductive.Query.DFS
 import Data.Graph.Inductive.Graph
+import Data.Graph.Inductive.Basic
 import Data.Graph.Inductive.PatriciaTree
 import Data.Graph.Inductive.Query.GVD
 import Data.Graph.Inductive.NodeMap
@@ -24,7 +25,7 @@ test = mkGraph [(0, Pos 0 0 0), (1, Pos 0 1 0), (2, Pos 1 0 0), (3, Pos 1 1 0),
 
 smallU :: Gr Pos Dir
 smallU = insMapEdge nm portal g where
-  (g, nm) = genUniverse 2 2 2
+  (g, nm) = genUniverse 3 3 3
   portal :: (Pos, Pos, Dir)
   portal = (Pos 1 0 2, Pos 1 2 0, D)
 
@@ -34,7 +35,7 @@ genUniverse x y t = mkMapGraph ps ls where
   ls = filter (\(_, b, _) -> b `elem` ps) $ concatMap links ps
 
 genPoses :: Int -> Int -> Int -> [Pos]
-genPoses x_max y_max t_max = [(Pos x y t) | x <- [0..x_max], y <- [0..y_max], t <- [0..t_max]]
+genPoses x_max y_max t_max = [(Pos x y t) | t <- [0..t_max-1], y <- [0..y_max-1], x <- [0..x_max-1]]
 
 move :: Pos -> Dir -> Pos
 move (Pos x y t) U = (Pos x (y+1) (t+1))
@@ -50,10 +51,6 @@ links p = (p, move p U, U)
         : []
 
 
--- isValid :: Path -> Gr Pos Dir -> Bool
--- isValid p g = map (context g) p
-
-
 trav :: CFun Pos Dir [Node]
 trav (_, _, _, outs) = map snd $ filter (\(a, _) -> a == R) outs
 
@@ -66,6 +63,8 @@ f a = xdfsWith trav res [a] test
 validTrans :: Context Pos Dir -> Bool
 -- No transit at all
 validTrans ([], _, _, []) = True
+--Just going out
+validTrans ([], _, _, _) = True
 -- Going in, going out
 validTrans ([(R, _)], _, _, [(R, _)]) = True
 validTrans ([(L, _)], _, _, [(L, _)]) = True
@@ -75,8 +74,12 @@ validTrans ([(D, _)], _, _, [(D, _)]) = True
 validTrans ([(R, _), (D, _)], _, _, [(D, _), (R, _)]) = True
 validTrans _ = False
 
+
+validPath :: [Node] -> Gr Pos Dir -> Bool
+validPath ns g = and $ map (validTrans . context g) ns
+
 toPos :: Int -> Int -> Int -> Node -> Pos
-toPos mx my mt n = Pos (n `rem` mx) (n `div` mx `rem` my) (n `div` mx `div` my `rem` mt)
+toPos mx my mt n = Pos (n `rem` mx) ((n `div` mx) `rem` my) ((n `div` (mx * my)) `rem` mt)
 
 toNode :: Int -> Int -> Int -> Pos -> Node
-toNode mx my _ (Pos x y t) = t * mx * my + y * mx + x
+toNode mx my _ (Pos x y t) = x + y*mx + t*mx*my

@@ -12,34 +12,21 @@ import Data.Graph.Inductive.Graph hiding ((&))
 import Data.Graph.Inductive.PatriciaTree
 import Control.Monad
 import Graph
+import Data.Maybe
 
-sPt = p2 (10.20, 10.20)
-ePt = p2 (2.85, 0.85)
+showGraph :: Gr Pos Dir -> Diagram B
+showGraph g = spots (labNodes g) <> arrows (labEdges g) (labNodes g)
 
--- We use small blue and red circles to mark the start and end points.
-spot :: Diagram B
-spot = circle 0.02 # lw none
-sDot = spot # fc blue # moveTo sPt
-eDot = spot # fc red  # moveTo ePt
+spots :: [LNode Pos] -> Diagram B
+spots ls = mconcat $ map (\(n, Pos x y _) -> spot x y <> text ((show n) ++ " (" ++ (show x) ++ "," ++ (show y) ++ ")") # fontSizeL 0.1 moveTo (p2 (fromIntegral x, fromIntegral y))) ls where
+  spot :: Int -> Int -> Diagram B
+  spot x y = circle 0.02 # lw none # fc blue # moveTo (p2 (fromIntegral x, fromIntegral y))
 
-example :: Diagram B 
-example = ( sDot <> eDot <> arrowBetween' (with & headLength .~ veryLarge) sPt ePt) # centerXY # pad 1.1
-
-showDiag :: Gr Pos Dir -> Diagram B
-showDiag g = grid (labNodes g) <> arrows (labEdges g)
-
-grid :: [LNode Pos] -> Diagram B
---grid ls = mconcat $ map (\(_, Pos x y _) -> sDot) ls
-grid ls = mconcat $ map (\(_, Pos x y _) -> spot # fc blue # moveTo (p2 (fromIntegral x, fromIntegral y))) ls
-
-mkArrow :: Pos -> Pos -> Diagram B
-mkArrow (Pos x1 y1 _) (Pos x2 y2 _) = arrowBetween' (with & headLength .~ veryLarge) (p2 (fromIntegral x1, fromIntegral y1)) (p2 (fromIntegral x2, fromIntegral y2))
-
-arrows :: [LEdge Dir] -> Diagram B
-arrows es = mconcat $ map (\(a, b, _) -> mkArrow (toPos 2 2 2 a) (toPos 2 2 2 b) ) es
+arrows :: [LEdge Dir] -> [LNode Pos] -> Diagram B
+arrows es ns = mconcat $ map (\(a, b, _) -> mkArrow (fromJust $ lookup a ns) (fromJust $ lookup b ns) ) es where
+  mkArrow :: Pos -> Pos -> Diagram B
+  mkArrow (Pos x1 y1 _) (Pos x2 y2 _) = arrowBetween' (with & headLength .~ verySmall) (p2 (fromIntegral x1, fromIntegral y1)) (p2 (fromIntegral x2, fromIntegral y2))
 
 ex :: IO ()
---ex = mainWith $ sDot # centerXY # pad 1.1
---ex = mainWith $ grid [(0, Pos 1 1 1)] # centerXY # pad 1.1
---ex = mainWith $ bg white $ showDiag (fst $ genUniverse 2 2 2) # centerXY # pad 1.1
-ex = mainWith $ bg white $ showDiag (test) # centerXY # pad 1.1
+--ex = mainWith $ bg white $ showGraph (fst $ genUniverse 2 2 2) # centerXY # pad 1.1
+ex = mainWith $ bg white $ showGraph smallU # centerXY # pad 1.1
