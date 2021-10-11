@@ -27,7 +27,7 @@ smallU :: Gr Pos Dir
 smallU = insMapEdge nm portal g where
   (g, nm) = genUniverse 3 3 3
   portal :: (Pos, Pos, Dir)
-  portal = (Pos 1 0 2, Pos 1 2 0, D)
+  portal = (Pos 2 0 2, Pos 0 0 0, R)
 
 genUniverse :: Int -> Int -> Int -> (Gr Pos Dir, NodeMap Pos)
 genUniverse x y t = mkMapGraph ps ls where
@@ -63,8 +63,9 @@ f a = xdfsWith trav res [a] test
 validTrans :: Context Pos Dir -> Bool
 -- No transit at all
 validTrans ([], _, _, []) = True
---Just going out
+--Just going in or out
 validTrans ([], _, _, _) = True
+validTrans (_, _, _, []) = True
 -- Going in, going out
 validTrans ([(R, _)], _, _, [(R, _)]) = True
 validTrans ([(L, _)], _, _, [(L, _)]) = True
@@ -75,11 +76,16 @@ validTrans ([(R, _), (D, _)], _, _, [(D, _), (R, _)]) = True
 validTrans _ = False
 
 
-validPath :: [Node] -> Gr Pos Dir -> Bool
-validPath ns g = and $ map (validTrans . context g) ns
+validPath :: Gr Pos Dir -> [Node] -> Bool
+validPath g ns = and $ map (validTrans . context g) ns
 
 toPos :: Int -> Int -> Int -> Node -> Pos
 toPos mx my mt n = Pos (n `rem` mx) ((n `div` mx) `rem` my) ((n `div` (mx * my)) `rem` mt)
 
 toNode :: Int -> Int -> Int -> Pos -> Node
 toNode mx my _ (Pos x y t) = x + y*mx + t*mx*my
+
+allPaths = bft 0 smallU
+
+validPaths = filter (\p -> validPath (subgraph p smallU) p) allPaths
+

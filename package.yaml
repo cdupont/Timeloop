@@ -27,6 +27,9 @@ dependencies:
 - reanimate
 - fgl
 - containers
+- linear
+- colour
+- palette
 
 library:
   source-dirs: src
