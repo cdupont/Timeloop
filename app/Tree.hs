@@ -10,6 +10,7 @@ import Data.Map as M hiding (map)
 import Data.Maybe
 import Data.List
 import Data.List.Extra
+import Data.Tuple
 
 data Dir = N | S | E | W 
    deriving (Eq, Ord, Show)
@@ -57,28 +58,19 @@ smallU = M.insert (Pos 2 0 2) (Room (fromList [(E, (Pos 0 0 0, E))])) $ genUniv 
 smallU' :: Map Pos Room
 smallU' = M.insert (Pos 2 0 2) (Room (fromList [(E, (Pos 1 2 0, S))])) $ genUniv (Pos 3 3 3)
 
--- 3*3 universe with angled portal and colision
+-- 3*3 universe with  colision
 smallU'' :: Map Pos Room
 smallU'' = M.insert (Pos 1 0 2) (Room (fromList [(E, (Pos 1 2 0, S))])) $ genUniv (Pos 3 3 3)
 
 -- straight traversal, no colisions
 -- start at a position with a certain direction
-trav :: Pos -> Dir -> Map Pos Room -> [(Pos, Dir)]
-trav p d mr = (p, d) : rest where
-  rest = case M.lookup d doors of 
-    Just (p', d') -> trav p' d' mr
-    Nothing -> []
-  -- doors of the room at position p
-  doors :: Map Dir (Pos, Dir)
-  doors = _doors (mr ! p) 
+trav :: (Pos, Dir) -> Map Pos Room -> [(Pos, Dir)]
+trav start univ = start : unfoldr findNext start where
+   findNext (p, d) = case M.lookup d $ _doors (univ ! p) of
+               Just next -> Just (next, next)
+               Nothing -> Nothing
 
--- straight traversal, no colisions
--- start at a position with a certain direction
---trav' :: Pos -> Room -> Map Pos Room -> [(Pos, Room)]
---trav' p r mr = (p, r) : case M.lookup d (_doors (mr ! p)) of  -- Lookup through the doors if one is iin our direction
---                    Just (p', d') -> trav p' (Room (fromList [(p', ())])) mr -- One exists, it leads to p', with direction d'
---                    Nothing -> []
-              
+        
 validTrav :: [(Pos, (Dir, Dir))] -> Bool
 validTrav psdd = and $ Prelude.map (\(a, b) -> validTrav' b) $ groupSort psdd 
 
@@ -86,23 +78,27 @@ validTrav psdd = and $ Prelude.map (\(a, b) -> validTrav' b) $ groupSort psdd
 validTrav' :: [(Dir, Dir)] -> Bool
 validTrav' []       = True -- Nobody
 validTrav' [(i, o)] = i == o -- Simple traversal
-validTrav' [a, b]   = b == col a -- collisions
+validTrav' [a, b]   = b == swap a -- collisions
 
--- collide two travellers
-col :: (Dir, Dir) -> (Dir, Dir)
-col (N, N) = (N, N) -- Straight for both
-col (N, S) = (S, N) 
-col (N, E) = (W, N) 
-col (N, W) = (E, S) 
-col (S, N) = (S, N)
-col (S, S) = (S, S) 
-col (S, E) = (W, N) 
-col (S, W) = (E, N) 
-col (E, N) = (S, W)
-col (E, S) = (N, W) 
-col (E, E) = (E, E) 
-col (E, W) = (W, E) 
-col (W, N) = (S, E)
-col (W, S) = (N, E) 
-col (W, E) = (E, W) 
-col (W, W) = (W, W) 
+trajCol = [(Pos {x = 0, y = 1, t = 0}, (E, E)),
+           (Pos {x = 1, y = 1, t = 1}, (E, S)),
+           (Pos {x = 1, y = 0, t = 2}, (S, S)), 
+           (Pos {x = 1, y = 2, t = 0}, (S, S)),
+           (Pos {x = 1, y = 1, t = 1}, (S, E)),
+           (Pos {x = 2, y = 1, t = 2}, (E, E))]
+
+--paths :: (Pos, Dir) -> Map Pos Room -> [[(Pos, Dir)]]
+--paths start univ = start : unfoldr findNext start where
+--   findNext (p, d) = case M.lookup d $ _doors (univ ! p) of
+--               Just next -> Just (next, next)
+--               Nothing -> Nothing
+
+allPaths :: (Pos, (Dir, Dir)) -> Map Pos Room -> [[(Pos, (Dir, Dir))]]
+allPaths (p, (d1, d2)) univ = map ((p, (d1, d2)):) (paths N ++ paths S ++ paths E ++ paths W) where
+  paths dir = case M.lookup dir (_doors (univ ! p)) of
+    Just (p', d') -> allPaths (p', (d2, d'))  univ
+    Nothing   -> [[]]
+--  
+--  allPaths p mr = unfoldr f p where
+--  unfoldr :: (b -> Maybe (a, b)) -> b -> [a] 
+
