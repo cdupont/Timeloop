@@ -30,6 +30,7 @@ dependencies:
 - linear
 - colour
 - palette
+- extra
 
 library:
   source-dirs: src
