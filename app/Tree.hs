@@ -50,9 +50,9 @@ genRoom p mp = Room $ fromList $ [(d, (move p d, d)) | d <- [N, S, E, W], move p
 genUniv :: MaxPos -> Map Pos Room
 genUniv mp@(Pos mx my mt) = fromList $ [(Pos x y t, genRoom (Pos x y t) mp) | t <- [0..mt-1], y <- [0..my-1], x <- [0..mx-1]]
 
--- A 3*3 universe with a portal
+-- A 3*3 universe with no portal
 smallU :: Map Pos Room
-smallU = M.insert (Pos 2 0 2) (Room (fromList [(E, (Pos 0 0 0, E))])) $ genUniv (Pos 3 3 3)
+smallU = genUniv (Pos 3 3 3)
 
 -- 3*3 universe with angled portal
 smallU' :: Map Pos Room
@@ -94,9 +94,9 @@ trajCol = [(Pos {x = 0, y = 1, t = 0}, (E, E)),
 --               Nothing -> Nothing
 
 allPaths :: (Pos, (Dir, Dir)) -> Map Pos Room -> [[(Pos, (Dir, Dir))]]
-allPaths (p, (d1, d2)) univ = map ((p, (d1, d2)):) (paths N ++ paths S ++ paths E ++ paths W) where
+allPaths cur@(p, (d1, d2)) univ = map (cur:) (paths N ++ paths S ++ paths E ++ paths W) where
   paths dir = case M.lookup dir (_doors (univ ! p)) of
-    Just (p', d') -> allPaths (p', (d2, d'))  univ
+    Just (p', d') -> allPaths (p', (dir, d'))  univ
     Nothing   -> [[]]
 --  
 --  allPaths p mr = unfoldr f p where
