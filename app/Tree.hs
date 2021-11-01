@@ -93,8 +93,13 @@ trajCol = [(Pos {x = 0, y = 1, t = 0}, (E, E)),
 --               Just next -> Just (next, next)
 --               Nothing -> Nothing
 
-allPaths :: (Pos, (Dir, Dir)) -> Map Pos Room -> [[(Pos, (Dir, Dir))]]
+type Link = (Dir, Dir)
+type Move = (Pos, Link)
+type Path = [Move]
+
+allPaths :: Move -> Map Pos Room -> [Path]
 allPaths cur@(p, (d1, d2)) univ = map (cur:) (paths N ++ paths S ++ paths E ++ paths W) where
+  paths :: Dir -> [Path]
   paths dir = case M.lookup dir (_doors (univ ! p)) of
     Just (p', d') -> allPaths (p', (dir, d'))  univ
     Nothing   -> [[]]
