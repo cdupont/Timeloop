@@ -35,7 +35,7 @@ arrows :: [(Pos, Room)] -> Diagram B
 arrows rs = mconcat $ map (\(p1, (Room ds))-> doorArrows p1 (toList ds)) rs where
 
 --draw the arrows for a door
-doorArrows :: Pos -> [(Dir, (Pos, Dir))] -> Diagram B
+doorArrows :: Pos -> [(OutDir, (Pos, InDir))] -> Diagram B
 doorArrows p1@(Pos _ _ t) ds = mconcat $ map (\(d1, (p2, d2)) -> mkArrow (proj $ toP3 p1, d1) (proj $ toP3 p2, d2) t) ds
 
 
@@ -56,11 +56,11 @@ control E = r2 (0.5, 0)
 control W = r2 (-0.5, 0)
 
 -- shaft of arrows
-shaft :: (P2 Double, Dir) -> (P2 Double, Dir) ->  Located (Trail V2 Double)
-shaft (p, d) (p', d') = trailFromSegments [bézier3 (control d) ((p' .-. p) - (control d')) (p' .-. p)] `at` p
+shaft :: (P2 Double, OutDir) -> (P2 Double, InDir) ->  Located (Trail V2 Double)
+shaft (p, OutDir d) (p', InDir d') = trailFromSegments [bézier3 (control d) ((p' .-. p) - (control d')) (p' .-. p)] `at` p
 
 -- create a single arrow
-mkArrow :: (P2 Double, Dir) -> (P2 Double, Dir) -> Int -> Diagram B
+mkArrow :: (P2 Double, OutDir) -> (P2 Double, InDir) -> Int -> Diagram B
 mkArrow a b col = arrowFromLocatedTrail' (with & arrowHead .~ dart
                               & lengths .~ veryLarge
                               & shaftStyle %~ lw thick) (shaft a b) # lc (clrs !! col)

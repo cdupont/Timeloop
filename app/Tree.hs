@@ -9,8 +9,9 @@ module Tree where
 import Data.Map as M hiding (map)
 import Data.Maybe
 import Data.List
-import Data.List.Extra
+import Data.List.Extra hiding (iterate')
 import Data.Tuple
+import qualified Control.Monad.HT as HT
 
 data Dir = N | S | E | W 
    deriving (Eq, Ord, Show)
@@ -23,9 +24,14 @@ data Pos = Pos {
 
 type MaxPos = Pos
 
+newtype InDir = InDir Dir
+  deriving (Eq, Ord, Show)
+newtype OutDir = OutDir Dir
+  deriving (Eq, Ord, Show)
+
 -- A room
 data Room = Room {
-  _doors :: Map Dir (Pos, Dir)} -- 4 doors (N, S, E, W) linking to another position with entry direction
+  _doors :: Map OutDir (Pos, InDir)} -- 4 doors (N, S, E, W) linking to another position with entry direction
   deriving (Eq, Ord, Show)
 
 -- Universe is a collection of rooms indexed by their position
@@ -44,7 +50,7 @@ move (Pos x y t) W = (Pos (x-1) y (t+1))
 
 -- Generate a room with links to other rooms
 genRoom :: Pos -> MaxPos -> Room
-genRoom p mp = Room $ fromList $ [(d, (move p d, d)) | d <- [N, S, E, W], move p d `isIn` mp]
+genRoom p mp = Room $ fromList $ [(OutDir d, (move p d, InDir d)) | d <- [N, S, E, W], move p d `isIn` mp]
 
 -- Generate a universe within the limits
 genUniv :: MaxPos -> Map Pos Room
@@ -56,54 +62,51 @@ smallU = genUniv (Pos 3 3 3)
 
 -- 3*3 universe with angled portal
 smallU' :: Map Pos Room
-smallU' = M.insert (Pos 2 0 2) (Room (fromList [(E, (Pos 1 2 0, S))])) $ genUniv (Pos 3 3 3)
+smallU' = M.insert (Pos 2 0 2) (Room (fromList [(OutDir E, (Pos 1 2 0, InDir S))])) $ genUniv (Pos 3 3 3)
 
 -- 3*3 universe with  colision
 smallU'' :: Map Pos Room
-smallU'' = M.insert (Pos 1 0 2) (Room (fromList [(E, (Pos 1 2 0, S))])) $ genUniv (Pos 3 3 3)
+smallU'' = M.insert (Pos 1 0 2) (Room (fromList [(OutDir E, (Pos 1 2 0, InDir S))])) $ genUniv (Pos 3 3 3)
 
 -- straight traversal, no colisions
 -- start at a position with a certain direction
-trav :: (Pos, Dir) -> Map Pos Room -> [(Pos, Dir)]
-trav start univ = start : unfoldr findNext start where
-   findNext (p, d) = case M.lookup d $ _doors (univ ! p) of
-               Just next -> Just (next, next)
-               Nothing -> Nothing
-
-        
-validTrav :: [(Pos, (Dir, Dir))] -> Bool
-validTrav psdd = and $ Prelude.map (\(a, b) -> validTrav' b) $ groupSort psdd 
-
--- Transits in a single room
-validTrav' :: [(Dir, Dir)] -> Bool
-validTrav' []       = True -- Nobody
-validTrav' [(i, o)] = i == o -- Simple traversal
-validTrav' [a, b]   = b == swap a -- collisions
-
-trajCol = [(Pos {x = 0, y = 1, t = 0}, (E, E)),
-           (Pos {x = 1, y = 1, t = 1}, (E, S)),
-           (Pos {x = 1, y = 0, t = 2}, (S, S)), 
-           (Pos {x = 1, y = 2, t = 0}, (S, S)),
-           (Pos {x = 1, y = 1, t = 1}, (S, E)),
-           (Pos {x = 2, y = 1, t = 2}, (E, E))]
-
---paths :: (Pos, Dir) -> Map Pos Room -> [[(Pos, Dir)]]
---paths start univ = start : unfoldr findNext start where
---   findNext (p, d) = case M.lookup d $ _doors (univ ! p) of
+--trav :: Move -> Map Pos Room -> [Move]
+--trav start univ = start : unfoldr findNext start where
+--   findNext (p, (d1, d2)) = case M.lookup d2 $ _doors (univ ! p) of
 --               Just next -> Just (next, next)
 --               Nothing -> Nothing
 
-type Link = (Dir, Dir)
-type Move = (Pos, Link)
+        
+validTrav :: [(Pos, (InDir, OutDir))] -> Bool
+validTrav psdd = and $ Prelude.map (\(a, b) -> validTrav' b) $ groupSort psdd 
+
+-- Transits in a single room
+validTrav' :: [(InDir, OutDir)] -> Bool
+validTrav' []       = True -- Nobody
+validTrav' [(InDir i, OutDir o)] = i == o -- Simple straight traversal
+validTrav' [(InDir i1, OutDir o1), (InDir i2, OutDir o2)] = o1 == i2 && o2 == i1  -- collisions
+
+--trajCol = [(Pos {x = 0, y = 1, t = 0}, (E, E)),
+--           (Pos {x = 1, y = 1, t = 1}, (E, S)),
+--           (Pos {x = 1, y = 0, t = 2}, (S, S)), 
+--           (Pos {x = 1, y = 2, t = 0}, (S, S)),
+--           (Pos {x = 1, y = 1, t = 1}, (S, E)),
+--           (Pos {x = 2, y = 1, t = 2}, (E, E))]
+
+
+
+type Move = (Pos, (OutDir, InDir))
 type Path = [Move]
 
-allPaths :: Move -> Map Pos Room -> [Path]
-allPaths cur@(p, (d1, d2)) univ = map (cur:) (paths N ++ paths S ++ paths E ++ paths W) where
-  paths :: Dir -> [Path]
-  paths dir = case M.lookup dir (_doors (univ ! p)) of
-    Just (p', d') -> allPaths (p', (dir, d'))  univ
-    Nothing   -> [[]]
---  
---  allPaths p mr = unfoldr f p where
---  unfoldr :: (b -> Maybe (a, b)) -> b -> [a] 
+
+allPaths' :: Move -> Map Pos Room -> [Path]
+allPaths' cur univ = allPaths paths cur where 
+  paths :: Move -> [Move]
+  paths (p1, _) = map (\(d3, (p2, d4)) -> (p2, (d3, d4))) $ toList $ _doors $ univ ! p1
+  
+
+allPaths :: (a -> [a]) -> a -> [[a]]
+allPaths f a = map (a:) ([] : concatMap (allPaths f) (f a))
+
+
 
