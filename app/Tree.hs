@@ -6,7 +6,7 @@
 
 module Tree where
 
-import Data.Map as M hiding (map)
+import Data.Map as M hiding (map, take, filter)
 import Data.Maybe
 import Data.List
 import Data.List.Extra hiding (iterate')
@@ -77,53 +77,54 @@ smallU'' = M.insert (Pos 1 0 2) (Room (fromList [(OutDir S, (Pos 1 2 0, InDir S)
 --               Just next -> Just (next, next)
 --               Nothing -> Nothing
 
+-- Transit through a room
+type Transit = (Pos, (InDir, OutDir))
+type Path = [Transit]
         
-validTrav :: [(Pos, (InDir, OutDir))] -> Bool
-validTrav psdd = and $ Prelude.map (\(a, b) -> validTrav' b) $ groupSort psdd 
+-- valid traversal of several rooms         
+validTrav :: [Transit] -> Bool
+validTrav ts = and $ map (\(_, t) -> validTransRoom t) $ groupSort ts
 
--- Transits in a single room
-validTrav' :: [(InDir, OutDir)] -> Bool
-validTrav' []       = True -- Nobody
-validTrav' [(InDir i, OutDir o)] = i == o -- Simple straight traversal
-validTrav' [(InDir i1, OutDir o1), (InDir i2, OutDir o2)] = o1 == i2 && o2 == i1  -- collisions
-validTrav' _ = False 
-
-
-type Move = (Pos, (OutDir, InDir))
-type Trav = (Pos, (InDir, OutDir))
-type Path = [Move]
+-- valid Transits through a single room (there can be several transits colliding)
+validTransRoom :: [(InDir, OutDir)] -> Bool
+validTransRoom []       = True -- Nobody
+validTransRoom [(InDir i, OutDir o)] = i == o -- Simple straight traversal
+validTransRoom [(InDir i1, OutDir o1), (InDir i2, OutDir o2)] = o1 == i2 && o2 == i1  -- collisions
+validTransRoom _ = False 
 
 
-allPaths :: Move -> Map Pos Room -> [Path]
-allPaths cur univ = bfPaths paths cur where 
-  paths :: Move -> [Move]
-  paths (p1, _) = map (\(d3, (p2, d4)) -> (p2, (d3, d4))) $ toList $ _doors $ univ ! p1
-  
-allTravs :: Trav -> Map Pos Room -> [[Trav]]
-allTravs cur univ = bfPaths paths cur where 
-  paths :: Trav -> [Trav]
-  paths (p1, (i1, o1)) = map (\o -> (p2, (i2, o))) $ keys $ _doors $ univ ! p2 where
+allTravs :: Transit -> Map Pos Room -> [Path]
+allTravs cur univ = bfPaths nextTrans cur where 
+  nextTrans :: Transit -> [Transit]
+  nextTrans (p1, (i1, o1)) = map (\o -> (p2, (i2, o))) $ keys $ _doors $ univ ! p2 where
     (p2, i2) = (_doors $ univ ! p1) ! o1
 
 dfPaths :: (a -> [a]) -> a -> [[a]]
 dfPaths f a = map (a:) ([] : concatMap (dfPaths f) (f a))
-
-toTravs :: [Move] -> [Trav]
-toTravs ms = zipWith (\(p1, (o1, i1)) (p2, (o2, i2)) -> (p2, (i1, o2))) ms (tail ms)
 
 bfPaths :: (a -> [a]) -> a -> [[a]]
 bfPaths f a = go [(a, [a])] where
   go []              =  []
   go ((s, path) : q) = path : go (q ++ [ (x, path ++ [x]) | x <- f s ])
 
-showMove :: Move -> String
-showMove ((Pos x y t), (OutDir o, InDir i)) = "(" ++ (show x) ++ ", " ++ (show y) ++ ", " ++ (show t) ++ ") " ++ (show o) ++ "~>" ++ (show i)
+pathToU :: [(Pos, (InDir, OutDir))] -> Map Pos Room -> Map Pos Room
+pathToU ts univ = fromListWith merge $ map (\(p, (i, o)) -> (p, Room (fromList [(o, (_doors $ univ ! p) ! o)]))) ts where
+  merge :: Room -> Room -> Room
+  merge (Room ds1) (Room ds2) = Room (M.union ds1 ds2)
+
+--data Room = Room {
+--   _doors :: Map OutDir (Pos, InDir)} 
+
+showTransit :: Transit -> String
+showTransit ((Pos x y t), (InDir i, OutDir o)) = (show i) ++ "->(" ++ (show x) ++ "," ++ (show y) ++ "," ++ (show t) ++ ")->" ++ (show o)
 
 showPath :: Path -> String
-showPath p = concat $ intersperse " " (map showMove p)
+showPath ts = concat $ intersperse " ~ " (map showTransit ts)
 
-showTrav :: Trav -> String
-showTrav ((Pos x y t), (InDir i, OutDir o)) = (show i) ++ "->(" ++ (show x) ++ "," ++ (show y) ++ "," ++ (show t) ++ ")->" ++ (show o)
 
-showTravs :: [Trav] -> String
-showTravs ts = concat $ intersperse " ~ " (map showTrav ts)
+exampleTravs = allTravs (Pos 0 1 0, (InDir E, OutDir E)) smallU''
+goodTravs = filter validTrav (take 1000 exampleTravs)
+showGoodTravs = putStrLn $ concat $ intersperse "\n" (map showPath goodTravs)
+
+
+

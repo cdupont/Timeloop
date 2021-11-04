@@ -67,5 +67,5 @@ mkArrow a b col = arrowFromLocatedTrail' (with & arrowHead .~ dart
 
 ex :: IO ()
 --ex = mainWith $ bg white $ showGraph (genUniv (Pos 2 2 2)) # centerXY # pad 1.1
-ex = mainWith $ bg white $ showGraph smallU' # centerXY # pad 1.1
---ex = mainWith $ bg white $ (mkArrow (p2 (0, 0), E) (p2 (1, 1), W)) # centerXY # pad 1.1
+--ex = mainWith $ bg white $ showGraph smallU' # centerXY # pad 1.1
+ex = mainWith $ bg white $ showGraph (pathToU (goodTravs !!2) smallU'' ) # centerXY # pad 1.1
