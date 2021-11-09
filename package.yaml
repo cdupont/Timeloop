@@ -25,12 +25,17 @@ dependencies:
 - diagrams-lib
 - diagrams-svg
 - reanimate
+- reanimate-svg
 - fgl
 - containers
 - linear
 - colour
 - palette
 - extra
+- utility-ht 
+- bytestring
+- svg-builder
+- string-conversions
 
 library:
   source-dirs: src

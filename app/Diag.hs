@@ -4,7 +4,7 @@
 
 module Diag where
 
-import Diagrams.Prelude hiding (rotate, E)
+import Diagrams.Prelude hiding (rotate, E, start)
 import Diagrams.Backend.SVG.CmdLine
 import Control.Monad
 import Tree
@@ -46,7 +46,7 @@ toP3 (Pos x y t) = p3 (fromIntegral x, fromIntegral y, fromIntegral t)
 proj :: P3 Double -> P2 Double 
 proj p = origin .+^ v ^._xy where
   v = rotate q (p .-. origin)
-  q = axisAngle (V3 1.0 1.0 0.0) 0.3 
+  q = axisAngle (V3 1.0 1.0 0.0) 1 
 
 -- control points for bézier curves
 control :: Dir -> V2 Double
@@ -65,7 +65,10 @@ mkArrow a b col = arrowFromLocatedTrail' (with & arrowHead .~ dart
                               & lengths .~ veryLarge
                               & shaftStyle %~ lw thick) (shaft a b) # lc (clrs !! col)
 
+col1 :: Diagram B
+col1 = showGraph (pathToU (goodTravs start smallUCol !!2) smallUCol ) 
+
 ex :: IO ()
 --ex = mainWith $ bg white $ showGraph (genUniv (Pos 2 2 2)) # centerXY # pad 1.1
 --ex = mainWith $ bg white $ showGraph smallU' # centerXY # pad 1.1
-ex = mainWith $ bg white $ showGraph (pathToU (goodTravs !!2) smallU'' ) # centerXY # pad 1.1
+ex = mainWith $ bg white $ col1 # centerXY # pad 1.1

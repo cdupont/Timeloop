@@ -6,7 +6,7 @@
 
 module Tree where
 
-import Data.Map as M hiding (map, take, filter)
+import Data.Map as M hiding (map, take, filter, null)
 import Data.Maybe
 import Data.List
 import Data.List.Extra hiding (iterate')
@@ -66,8 +66,12 @@ smallU' :: Map Pos Room
 smallU' = M.insert (Pos 2 0 2) (Room (fromList [(OutDir E, (Pos 1 2 0, InDir S))])) $ genUniv (Pos 3 3 3)
 
 -- 3*3 universe with colision
-smallU'' :: Map Pos Room
-smallU'' = M.insert (Pos 1 0 2) (Room (fromList [(OutDir S, (Pos 1 2 0, InDir S))])) $ genUniv (Pos 3 3 3)
+smallUCol :: Map Pos Room
+smallUCol = M.insert (Pos 1 0 2) (Room (fromList [(OutDir S, (Pos 1 2 0, InDir S))])) $ genUniv (Pos 3 3 3)
+
+-- 3*3 universe with paradox colision
+smallUparadox :: Map Pos Room
+smallUparadox = M.insert (Pos 2 1 2) (Room (fromList [(OutDir S, (Pos 1 2 0, InDir S))])) $ genUniv (Pos 3 3 3)
 
 -- straight traversal, no colisions
 -- start at a position with a certain direction
@@ -94,7 +98,7 @@ validTransRoom _ = False
 
 
 allTravs :: Transit -> Map Pos Room -> [Path]
-allTravs cur univ = bfPaths nextTrans cur where 
+allTravs cur univ = bfPaths' nextTrans cur where 
   nextTrans :: Transit -> [Transit]
   nextTrans (p1, (i1, o1)) = map (\o -> (p2, (i2, o))) $ keys $ _doors $ univ ! p2 where
     (p2, i2) = (_doors $ univ ! p1) ! o1
@@ -106,6 +110,12 @@ bfPaths :: (a -> [a]) -> a -> [[a]]
 bfPaths f a = go [(a, [a])] where
   go []              =  []
   go ((s, path) : q) = path : go (q ++ [ (x, path ++ [x]) | x <- f s ])
+
+bfPaths' :: (a -> [a]) -> a -> [[a]]
+bfPaths' f a = go [(a, [a])] where
+  go []              =  []
+  go ((s, path) : q) = let rest = go (q ++ [ (x, path ++ [x]) | x <- f s ]) in if null (f s) then path : rest else rest
+
 
 pathToU :: [(Pos, (InDir, OutDir))] -> Map Pos Room -> Map Pos Room
 pathToU ts univ = fromListWith merge $ map (\(p, (i, o)) -> (p, Room (fromList [(o, (_doors $ univ ! p) ! o)]))) ts where
@@ -122,9 +132,19 @@ showPath :: Path -> String
 showPath ts = concat $ intersperse " ~ " (map showTransit ts)
 
 
-exampleTravs = allTravs (Pos 0 1 0, (InDir E, OutDir E)) smallU''
-goodTravs = filter validTrav (take 1000 exampleTravs)
-showGoodTravs = putStrLn $ concat $ intersperse "\n" (map showPath goodTravs)
+goodTravs :: Transit -> Map Pos Room -> [[Transit]]
+goodTravs start univ = filter validTrav $ take 1000 $ allTravs start univ
 
+showGoodTravs :: [[Transit]] -> IO ()
+showGoodTravs travs = putStrLn $ concat $ intersperse "\n" (map showPath travs)
 
+-- * Examples 
 
+start :: Transit
+start = (Pos 0 1 0, (InDir E, OutDir E))
+
+colTravs :: [[Transit]] 
+colTravs = goodTravs start smallUCol
+
+paradoxTravs :: [[Transit]] 
+paradoxTravs = goodTravs start smallUparadox

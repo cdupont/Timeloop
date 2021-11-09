@@ -6,6 +6,7 @@
 module Main where
 
 import Diag
+import Anim
 
 main :: IO ()
-main = ex 
+main = ex --anim 
