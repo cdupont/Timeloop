@@ -24,6 +24,7 @@ dependencies:
 - diagrams
 - diagrams-lib
 - diagrams-svg
+- diagrams-core
 - reanimate
 - reanimate-svg
 - fgl
@@ -36,6 +37,8 @@ dependencies:
 - bytestring
 - svg-builder
 - string-conversions
+- text 
+- optparse-simple
 
 library:
   source-dirs: src

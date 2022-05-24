@@ -131,6 +131,16 @@ showTransit ((Pos x y t), (InDir i, OutDir o)) = (show i) ++ "->(" ++ (show x) +
 showPath :: Path -> String
 showPath ts = concat $ intersperse " ~ " (map showTransit ts)
 
+showPath' :: MaxPos -> Path -> [[String]]
+showPath' (Pos mx my mt) p = [[getSymb x y | x <- [0..mx-1] ] | y <- [0..my-1]] where
+  getSymb x y = case find (\(Pos px py pt, (_, _)) -> px == x && py == y) p of
+                  Just ((Pos _ _ t), (i, o)) -> show t
+                  Nothing -> "."
+
+showPath'' :: MaxPos -> Path -> String
+showPath'' mp p = concat $ intersperse "\n" $ map concat $ showPath' mp p
+
+--type Transit = (Pos, (InDir, OutDir))
 
 goodTravs :: Transit -> Map Pos Room -> [[Transit]]
 goodTravs start univ = filter validTrav $ take 1000 $ allTravs start univ

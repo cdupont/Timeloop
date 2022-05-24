@@ -50,10 +50,10 @@ proj p = origin .+^ v ^._xy where
 
 -- control points for bézier curves
 control :: Dir -> V2 Double
-control N = r2 (0, 0.5)
-control S = r2 (0, -0.5)
-control E = r2 (0.5, 0)
-control W = r2 (-0.5, 0)
+control N = r2 (0, 1)
+control S = r2 (0, -1)
+control E = r2 (1, 0)
+control W = r2 (-1, 0)
 
 -- shaft of arrows
 shaft :: (P2 Double, OutDir) -> (P2 Double, InDir) ->  Located (Trail V2 Double)
@@ -62,11 +62,12 @@ shaft (p, OutDir d) (p', InDir d') = trailFromSegments [bézier3 (control d) ((p
 -- create a single arrow
 mkArrow :: (P2 Double, OutDir) -> (P2 Double, InDir) -> Int -> Diagram B
 mkArrow a b col = arrowFromLocatedTrail' (with & arrowHead .~ dart
-                              & lengths .~ veryLarge
-                              & shaftStyle %~ lw thick) (shaft a b) # lc (clrs !! col)
+                                               & lengths .~ small
+                                               & shaftStyle %~ lwL 0.01)
+                                         (shaft a b) # lc (clrs !! col)
 
 col1 :: Diagram B
-col1 = showGraph (pathToU (goodTravs start smallUCol !!2) smallUCol ) 
+col1 = showGraph (pathToU (goodTravs start smallUCol !!1) smallUCol ) 
 
 ex :: IO ()
 --ex = mainWith $ bg white $ showGraph (genUniv (Pos 2 2 2)) # centerXY # pad 1.1

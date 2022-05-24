@@ -7,6 +7,16 @@ module Main where
 
 import Diag
 import Anim
+import Tree
+import Options.Applicative.Simple
 
 main :: IO ()
-main = ex --anim 
+main = do 
+  (opts,()) <- simpleOptions "ver"
+                             "header"
+                             "desc"
+                             (flag () () (long "some-flag"))
+                             empty
+  let paths = goodTravs start smallUCol
+  showGoodTravs paths
+   
