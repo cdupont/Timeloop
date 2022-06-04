@@ -39,6 +39,8 @@ dependencies:
 - string-conversions
 - text 
 - optparse-simple
+- matrix
+- vector
 
 library:
   source-dirs: src
