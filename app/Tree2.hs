@@ -8,7 +8,13 @@ import qualified Data.Vector             as V
 
 
 data Dir = N | S | E | W 
-   deriving (Eq, Ord, Show)
+   deriving (Eq, Ord)
+
+instance Show Dir where
+  show N = "↑"
+  show W = "←"
+  show E = "→"
+  show S = "↓"
 
 data Pos = Pos {
   x :: Int,
@@ -22,7 +28,7 @@ data Portal = Portal (Pos, Dir) (Pos, Dir)
 type Univ = [Portal]
 
 data Tree = Straight Tree
-          | Bump RelDir Tree Tree Tree
+          | Bump RelDir Tree Tree
           | Loop Int
           | Stop
           deriving (Eq, Ord, Show)
@@ -56,9 +62,9 @@ turn' rd (p, d) = (p, turn rd d)
 
 getTrav :: Tree -> (Pos, Dir) -> Univ -> [Pos]
 getTrav (Straight t) (p, d) u = p : (getTrav t (move u (p,d)) u)
-getTrav (Bump Front t1 t2 t3) (p, d) u = [p] ++ (          getTrav t3 (move u (p, turn Right_ d)) u)
-                                             ++ (reverse $ getTrav t1 (move u (p, d) ) u)
-                                             ++ (          getTrav t2 (move u (p, turn Left_ d) ) u)
+getTrav (Bump Front t1 t2) (p, d) u = [p] ++ (getTrav t1 (move u (p, turn Right_ d)) u)
+                                          ++ (getTrav t2 (move u (p, turn Right_ $ turn Back d) ) u)
+                                            -- ++ (reverse $ getTrav t1 (move u (p, d) ) u)
                                           
 getTrav (Loop i) (p, d) u = [p] 
 getTrav Stop (p, d) u = [p]
@@ -70,19 +76,16 @@ initPos :: (Pos, Dir)
 initPos = (Pos 0 1 0, E)
 
 testTree :: Tree
-testTree = Straight $ Bump Front Stop Stop Stop
+testTree = Straight $ Bump Front (Straight Stop) Stop
 
-getMatrix :: [Pos] -> Matrix (Maybe Int)
-getMatrix ps = matrix 3 3 f where
+getPathMatrix :: [Pos] -> Matrix (Maybe Int)
+getPathMatrix ps = matrix 3 3 f where
   f (x, y) = case find (\(Pos x' y' _) -> x-1 == x' && y-1 == y') ps of
               Just (Pos _ _ t) -> Just t 
               Nothing -> Nothing
 
 prettyPath :: Matrix (Maybe Int) -> String
-prettyPath m = concat
-   [
-   unlines [unwords (fmap (\j -> fill $ strings ! (j, (nrows m) +1 - i)) [1..ncols m]) | i <- [1..nrows m] ]
-   ]
+prettyPath m = unlines [unwords (fmap (\j -> fill $ strings ! (j, (nrows m) +1 - i)) [1..ncols m]) ++ "\n" | i <- [1..nrows m] ]
  where
    strings = fmap showPos m
    widest = V.maximum $ fmap length (getMatrixAsVector strings)
@@ -91,3 +94,20 @@ prettyPath m = concat
    showPos (Just t) = show t
    showPos Nothing = ""
           
+getUnivMatrix :: [Portal] -> Matrix (Maybe (Int, Dir, Bool))
+getUnivMatrix ps = matrix 3 3 f where
+  f (x, y) = case find (\(Portal (Pos x1 y1 _, _) (Pos x2 y2 _, _)) -> (x-1 == x1 && y-1 == y1) || (x-1 == x2 && y-1 == y2)) ps of
+              Just (Portal (Pos x1 y1 t1, d1) (Pos _ _ t2, d2)) -> if (x-1 == x1 && y-1 == y1) 
+                                                                   then Just (t1, d1, True)
+                                                                   else Just (t2, d2, False)
+              Nothing -> Nothing
+
+prettyUniv :: Matrix (Maybe (Int, Dir, Bool)) -> String
+prettyUniv m = unlines [unwords (fmap (\j -> fill $ strings ! (j, (nrows m) +1 - i)) [1..ncols m]) ++ "\n" | i <- [1..nrows m] ]
+ where
+   strings = fmap showPos m
+   widest = V.maximum $ fmap length (getMatrixAsVector strings)
+   fill str = replicate (widest - length str) ' ' ++ str
+   blank = fill ""
+   showPos (Just (t, d, s)) = show t ++ show d ++ if s then "□" else "▣"
+   showPos Nothing = "."
