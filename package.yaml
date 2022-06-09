@@ -41,6 +41,7 @@ dependencies:
 - optparse-simple
 - matrix
 - vector
+- control-monad-omega
 
 library:
   source-dirs: src
