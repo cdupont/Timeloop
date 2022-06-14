@@ -4,12 +4,14 @@ module Tree2 where
 
 import Prelude hiding (Left, Right)
 import Data.List
+import Data.Ord
 import Data.Matrix hiding ((<|>))
 import qualified Data.Vector             as V
 import Data.Maybe (listToMaybe, catMaybes)
 import Control.Monad ((>>), guard, join)
 import Control.Monad.Omega
 import Control.Applicative
+import Data.List.Split
 
 data Dir = N | S | E | W 
    deriving (Eq, Ord)
@@ -33,6 +35,7 @@ data Pos = Pos {
 type Path = [Pos]
 
 data Portal = Portal Pos Pos
+  deriving (Eq, Ord, Show)
 
 type Univ = [Portal]
 
@@ -134,20 +137,21 @@ testTree = Straight $ Bump Front (Straight $ Straight Stop) Stop
 
 
 prettyUniv :: Univ -> String
-prettyUniv ps = pretty "." $ concatMap (\(Portal (Pos x1 y1 t1 d1) (Pos x2 y2 t2 d2)) -> [(x1, y1, show t1 ++ show d1 ++ if True then "□" else "▣" )]) ps
+prettyUniv ps = pretty "." $ concatMap showPortal ps where
+  showPortal (Portal (Pos x1 y1 t1 d1) (Pos x2 y2 t2 d2)) = [(x1, y1, show t1 ++ show d1 ++ "□"), (x2, y2, show t2 ++ show d2 ++ "▣" )]
 
 prettyPath :: [Pos] -> String
 prettyPath ps = pretty "." $ map (\(Pos x y t d) -> (x, y, show t ++ show d)) ps
 
 pretty :: String -> [(Int, Int, String)] -> String
-pretty def ps = unlines $ map unwords $ strings
+pretty def ps = unlines $ reverse $ map unwords $ chunksOf (maxX - minX +1) $ padStrings strings
  where
   (maxX, _, _) = maximumBy (\(x1, _, _) (x2, _, _) -> compare x1 x2) ps
   (minX, _, _) = minimumBy (\(x1, _, _) (x2, _, _) -> compare x1 x2) ps
   (_, maxY, _) = maximumBy (\(_, y1, _) (_, y2, _) -> compare y1 y2) ps
   (_ ,minY, _) = minimumBy (\(_, y1, _) (_, y2, _) -> compare y1 y2) ps
-  strings :: [[String]]
-  strings = [[getString ps def (x, y) | x <- [minX..maxX]] | y <- [minY..maxY]]
+  strings :: [String]
+  strings = [getString ps def (x, y) | x <- [minX..maxX], y <- [minY..maxY]]
 
 
 getString :: [(Int, Int, String)] -> String -> (Int, Int) -> String
@@ -155,4 +159,10 @@ getString ps def (x, y) = case filter (\(x', y', _) -> x == x' && y == y') ps of
   [] -> def
   as -> concatMap (\(_, _, s) -> s) as
 
+padStrings :: [String] -> [String]
+padStrings ss = map fill ss where
+  widest = maximum $ (map length) ss
+  fill str = let pad = (widest +1 - length str) `div` 2 
+             in replicate pad ' ' ++ str ++ replicate pad ' '
+  
 
