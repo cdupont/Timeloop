@@ -70,9 +70,10 @@ turn' Left_ a  = turn' Right_ $ turn' Back a
 turn' Front a  = a
 
 getPaths :: Tree -> Pos -> Univ -> [[Pos]]
-getPaths (Straight t) p u       =   updateHead (p :)           (getPaths t  (move u p) u)
-getPaths (Bump Front t1 t2) p u = ( updateHead (p :)           (getPaths t1 (move u (turn Right_ p)) u)) ++
-                                  ( updateHead (turn Back p :) (getPaths t2 (move u (turn Right_ $ turn Back p)) u))
+getPaths (Straight t) p u      =  updateHead (p :) (getPaths t  (move u p) u)
+getPaths (Bump from t1 t2) p u = (updateHead (p :) (getPaths t1 (move u (turn Right_ p)) u)) ++
+                                 (updateHead (p':) (getPaths t2 (move u (turn Right_ p')) u)) where
+                                 p' = turn Back $ turn from p
 getPaths (Loop i) p u = [[p]] 
 getPaths Stop p u = [[p]]
 
@@ -84,8 +85,10 @@ allTrees = runOmega allTrees'
 
 allTrees' :: Omega Tree
 allTrees' = pure Stop 
-       <|> Straight <$> allTrees'
-       <|> Bump Front <$> allTrees' <*> allTrees'
+       <|> Straight    <$> allTrees'
+       <|> Bump Front  <$> allTrees' <*> allTrees'
+       <|> Bump Right_ <$> allTrees' <*> allTrees'
+       <|> Bump Left_  <$> allTrees' <*> allTrees'
 
 
 allPaths :: Pos -> Univ -> [Path]
@@ -112,43 +115,44 @@ updateHead f (a : as) = f a : as
 
 --  sample data *
 
-onePortal :: Univ
-onePortal = [Portal (Pos 1 0 2 S) (Pos 2 1 0 W)]
+--Entrance portal below, exit in front
+portal1 :: Univ
+portal1 = [Portal (Pos 1 (-1) 2 S) (Pos 2 0 0 W)]
+
+--Entrance portal in front, exit up
+portal2 :: Univ
+portal2 = [Portal (Pos 2 0 2 E) (Pos 1 1 0 S)]
 
 initPos :: Pos
-initPos = Pos 0 1 0 E
+initPos = Pos 0 0 0 E
+
 
 testTree :: Tree
 testTree = Straight $ Bump Front (Straight $ Straight Stop) Stop
 
 -- * Pretty prints *
 
-getPathMatrix :: [Pos] -> Matrix [(Time, Dir)]
-getPathMatrix ps = matrix 3 3 f where
-  f (x, y) = map (\(Pos _ _ t d) -> (t, d)) $ filter (\(Pos x' y' _ _) -> x-1 == x' && y-1 == y') ps
 
-prettyPath :: Matrix [(Time, Dir)] -> String
-prettyPath m = unlines [unwords (fmap (\j -> fill $ strings ! (j, (nrows m) +1 - i)) [1..ncols m]) ++ "\n" | i <- [1..nrows m] ]
- where
-   strings = fmap showPos m
-   widest = V.maximum $ fmap length (getMatrixAsVector strings)
-   fill str = replicate ((widest +1 - length str) `div` 2) ' ' ++ str ++ replicate ((widest +1 - length str) `div` 2) ' '
-   blank = fill ""
-   showPos ps = intercalate " " $ map (\(t, d) -> show t ++ show d) ps
-          
-getUnivMatrix :: [Portal] -> Matrix (Maybe (Time, Dir, Bool))
-getUnivMatrix ps = matrix 3 3 f where
-  f (x, y) = case find (\(Portal (Pos x1 y1 _ _) (Pos x2 y2 _ _)) -> (x-1 == x1 && y-1 == y1) || (x-1 == x2 && y-1 == y2)) ps of
-              Just (Portal (Pos x1 y1 t1 d1) (Pos _ _ t2 d2)) | (x-1 == x1 && y-1 == y1) -> Just (t1, d1, True)
-              Just (Portal (Pos x1 y1 t1 d1) (Pos _ _ t2 d2)) | (x-1 == x1 && y-1 == y1) -> Just (t2, d2, False)
-              Nothing -> Nothing
+prettyUniv :: Univ -> String
+prettyUniv ps = pretty "." $ concatMap (\(Portal (Pos x1 y1 t1 d1) (Pos x2 y2 t2 d2)) -> [(x1, y1, show t1 ++ show d1 ++ if True then "□" else "▣" )]) ps
 
-prettyUniv :: Matrix (Maybe (Int, Dir, Bool)) -> String
-prettyUniv m = unlines [unwords (fmap (\j -> fill $ strings ! (j, (nrows m) +1 - i)) [1..ncols m]) ++ "\n" | i <- [1..nrows m] ]
+prettyPath :: [Pos] -> String
+prettyPath ps = pretty "." $ map (\(Pos x y t d) -> (x, y, show t ++ show d)) ps
+
+pretty :: String -> [(Int, Int, String)] -> String
+pretty def ps = unlines $ map unwords $ strings
  where
-   strings = fmap showPos m
-   widest = V.maximum $ fmap length (getMatrixAsVector strings)
-   fill str = replicate (widest - length str) ' ' ++ str
-   blank = fill ""
-   showPos (Just (t, d, s)) = show t ++ show d ++ if s then "□" else "▣"
-   showPos Nothing = "."
+  (maxX, _, _) = maximumBy (\(x1, _, _) (x2, _, _) -> compare x1 x2) ps
+  (minX, _, _) = minimumBy (\(x1, _, _) (x2, _, _) -> compare x1 x2) ps
+  (_, maxY, _) = maximumBy (\(_, y1, _) (_, y2, _) -> compare y1 y2) ps
+  (_ ,minY, _) = minimumBy (\(_, y1, _) (_, y2, _) -> compare y1 y2) ps
+  strings :: [[String]]
+  strings = [[getString ps def (x, y) | x <- [minX..maxX]] | y <- [minY..maxY]]
+
+
+getString :: [(Int, Int, String)] -> String -> (Int, Int) -> String
+getString ps def (x, y) = case filter (\(x', y', _) -> x == x' && y == y') ps of
+  [] -> def
+  as -> concatMap (\(_, _, s) -> s) as
+
+
