@@ -17,10 +17,10 @@ data Dir = N | S | E | W
    deriving (Eq, Ord)
 
 instance Show Dir where
-  show N = "↑"
-  show W = "←"
-  show E = "→"
-  show S = "↓"
+  show N = "↑ "
+  show W = "← "
+  show E = "→ "
+  show S = "↓ "
 
 type Time = Int
 type SpaceCoord = Int 
@@ -129,29 +129,50 @@ portal2 = [Portal (Pos 2 0 2 E) (Pos 1 1 0 S)]
 initPos :: Pos
 initPos = Pos 0 0 0 E
 
-
 testTree :: Tree
 testTree = Straight $ Bump Front (Straight $ Straight Stop) Stop
 
+-- sample searchs
+
+search1 :: [Path]
+search1 = filter (\l -> length l == 6) $ allPaths initPos portal1
+
+pretty1 :: String
+pretty1 = concatMap (prettyUnivPath lims portal1) search1
+
 -- * Pretty prints *
 
+type Limits = ((Int, Int), (Int, Int))
 
-prettyUniv :: Univ -> String
-prettyUniv ps = pretty "." $ concatMap showPortal ps where
-  showPortal (Portal (Pos x1 y1 t1 d1) (Pos x2 y2 t2 d2)) = [(x1, y1, show t1 ++ show d1 ++ "□"), (x2, y2, show t2 ++ show d2 ++ "▣" )]
+lims :: Limits
+lims = ((-3, -3), (3, 3))
 
-prettyPath :: [Pos] -> String
-prettyPath ps = pretty "." $ map (\(Pos x y t d) -> (x, y, show t ++ show d)) ps
+prettyUniv' :: Univ -> String
+prettyUniv' u = prettyUniv u (getLimits $ concatMap (\(Portal p1 p2) -> [p1, p2]) u)
 
-pretty :: String -> [(Int, Int, String)] -> String
-pretty def ps = unlines $ reverse $ map unwords $ chunksOf (maxX - minX +1) $ padStrings strings
+prettyUniv :: Univ -> Limits -> String
+prettyUniv ps l = pretty "." l $ showUniv ps
+
+showUniv :: Univ -> [(Int, Int, String)] 
+showUniv ps = concatMap (\(Portal (Pos x1 y1 t1 d1) (Pos x2 y2 t2 d2)) -> [(x1, y1, show t1 ++ show d1 ++ "□ "), (x2, y2, show t2 ++ show d2 ++ "▣ " )]) ps 
+
+
+prettyPath :: Limits -> [Pos] -> String
+prettyPath l ps = pretty "." l $ showPos ps 
+
+showPos :: [Pos] -> [(Int, Int, String)] 
+showPos ps = map (\(Pos x y t d) -> (x, y, show t ++ show d)) ps
+
+
+prettyUnivPath :: Limits -> Univ -> [Pos] -> String
+prettyUnivPath l u ps = pretty "." l $ showPos ps ++ showUniv u
+
+-- Pretty prints a list of coordinates as a matrix.
+pretty :: String -> Limits -> [(Int, Int, String)] -> String
+pretty def ((minX, minY), (maxX, maxY)) ps = unlines $ reverse $ map unwords $ chunksOf (maxX - minX +1) $ padStrings strings
  where
-  (maxX, _, _) = maximumBy (\(x1, _, _) (x2, _, _) -> compare x1 x2) ps
-  (minX, _, _) = minimumBy (\(x1, _, _) (x2, _, _) -> compare x1 x2) ps
-  (_, maxY, _) = maximumBy (\(_, y1, _) (_, y2, _) -> compare y1 y2) ps
-  (_ ,minY, _) = minimumBy (\(_, y1, _) (_, y2, _) -> compare y1 y2) ps
   strings :: [String]
-  strings = [getString ps def (x, y) | x <- [minX..maxX], y <- [minY..maxY]]
+  strings = [getString ps def (x, y) | y <- [minY..maxY], x <- [minX..maxX]]
 
 
 getString :: [(Int, Int, String)] -> String -> (Int, Int) -> String
@@ -162,7 +183,22 @@ getString ps def (x, y) = case filter (\(x', y', _) -> x == x' && y == y') ps of
 padStrings :: [String] -> [String]
 padStrings ss = map fill ss where
   widest = maximum $ (map length) ss
-  fill str = let pad = (widest +1 - length str) `div` 2 
-             in replicate pad ' ' ++ str ++ replicate pad ' '
+  fill str = replicate ((widest +1 - length str) `div` 2) ' ' ++ str ++ replicate ((widest  - length str) `div` 2) ' '
   
+getLimits :: [Pos] -> Limits 
+getLimits ps = ((minX, minY), (maxX, maxY)) where
+  (Pos maxX _ _ _) = maximumBy (\(Pos x1 _ _ _) (Pos x2 _ _ _) -> compare x1 x2) ps
+  (Pos minX _ _ _) = minimumBy (\(Pos x1 _ _ _) (Pos x2 _ _ _) -> compare x1 x2) ps
+  (Pos _ maxY _ _) = maximumBy (\(Pos _ y1 _ _) (Pos _ y2 _ _) -> compare y1 y2) ps
+  (Pos _ minY _ _) = minimumBy (\(Pos _ y1 _ _) (Pos _ y2 _ _) -> compare y1 y2) ps
+
+doubleChars :: [Char]
+doubleChars = '↑' : '←' : '→' : '↓' : '□' : '▣' : []
+
+length' :: [Char] -> Int
+length' [] = 0
+length' (c:cs) = if c `elem` doubleChars
+                 then 2 + length' cs
+                 else 1 + length' cs
+
 
