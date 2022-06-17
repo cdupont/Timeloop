@@ -12,6 +12,7 @@ import Control.Monad ((>>), guard, join)
 import Control.Monad.Omega
 import Control.Applicative
 import Data.List.Split
+import Control.Monad
 
 data Dir = N | S | E | W 
    deriving (Eq, Ord)
@@ -140,6 +141,19 @@ search1 = filter (\l -> length l == 6) $ allPaths initPos portal1
 pretty1 :: String
 pretty1 = concatMap (prettyUnivPath lims portal1) search1
 
+pretty1' :: [String]
+pretty1' = map (\t -> prettyUnivPath lims portal1 $ filterTime (head search1) t) [0..] 
+
+filterTime :: Path -> Time -> Path
+filterTime ps t = filter (\(Pos _ _ t' _) -> t == t') ps
+
+stepper :: IO ()
+stepper = forM_ pretty1' (\s -> do
+  getChar
+  putStr "\ESC[2J"
+  putStrLn s)
+  
+
 -- * Pretty prints *
 
 type Limits = ((Int, Int), (Int, Int))
@@ -182,7 +196,8 @@ getString ps def (x, y) = case filter (\(x', y', _) -> x == x' && y == y') ps of
 
 padStrings :: [String] -> [String]
 padStrings ss = map fill ss where
-  widest = maximum $ (map length) ss
+  --widest = maximum $ (map length) ss
+  widest = 9
   fill str = replicate ((widest +1 - length str) `div` 2) ' ' ++ str ++ replicate ((widest  - length str) `div` 2) ' '
   
 getLimits :: [Pos] -> Limits 
@@ -191,14 +206,5 @@ getLimits ps = ((minX, minY), (maxX, maxY)) where
   (Pos minX _ _ _) = minimumBy (\(Pos x1 _ _ _) (Pos x2 _ _ _) -> compare x1 x2) ps
   (Pos _ maxY _ _) = maximumBy (\(Pos _ y1 _ _) (Pos _ y2 _ _) -> compare y1 y2) ps
   (Pos _ minY _ _) = minimumBy (\(Pos _ y1 _ _) (Pos _ y2 _ _) -> compare y1 y2) ps
-
-doubleChars :: [Char]
-doubleChars = '↑' : '←' : '→' : '↓' : '□' : '▣' : []
-
-length' :: [Char] -> Int
-length' [] = 0
-length' (c:cs) = if c `elem` doubleChars
-                 then 2 + length' cs
-                 else 1 + length' cs
 
 
