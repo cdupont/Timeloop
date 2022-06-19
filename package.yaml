@@ -42,6 +42,8 @@ dependencies:
 - matrix
 - vector
 - control-monad-omega
+- split
+- brick >= 0.69.1
 
 library:
   source-dirs: src

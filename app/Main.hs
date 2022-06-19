@@ -5,18 +5,17 @@
 
 module Main where
 
-import Diag
-import Anim
-import Tree
+import Tree2
 import Options.Applicative.Simple
+import Brick (simpleMain)
+import Disp
 
 main :: IO ()
 main = do 
   (opts,()) <- simpleOptions "ver"
                              "header"
                              "desc"
-                             (flag () () (long "some-flag"))
+                             (strOption (short 'n') :: Parser String)
                              empty
-  let paths = goodTravs start smallUCol
-  showGoodTravs paths
+  simpleMain ui
    
