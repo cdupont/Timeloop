@@ -18,8 +18,10 @@ main = do
                              "desc"
                              options
                              empty
-  let (pos :: Pos) = readPos i
-  putStrLn $ show pos
+  let (pos1 :: Pos) = readPos i
+  let (pos2 :: Pos) = readPos o
+  let univ = [Portal pos1 pos2]
+  simpleMain $ tableDisplay univ
 
 options :: Parser (String, String)
 options = do
@@ -27,10 +29,9 @@ options = do
   o <- (strOption (short 'o') :: Parser String)
   return (i, o)
 
-
 readPos :: String -> Pos
-readPos (x:' ':y:' ':t:' ':d:_) = Pos (read [x]) (read [y]) (read [t]) (read [d])
+readPos s = Pos (read x) (read y) (read t) (read d) where
+ (x:y:t:d:_) = words s
 
 
-  --simpleMain tableDisplay 
    

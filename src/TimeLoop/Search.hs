@@ -79,6 +79,8 @@ joinPaths ps = loop ps
 updateHead _ []       = []
 updateHead f (a : as) = f a : as
 
+search :: Univ -> Int -> [Path]
+search u depth = filter (\l -> length l == depth) $ allPaths initPos u
 
 -- sample searchs
 

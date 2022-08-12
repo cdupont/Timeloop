@@ -4,14 +4,24 @@ module UI where
 
 import Brick
 import Brick.Widgets.Table
-import Brick.Widgets.Center (center)
+import Brick.Widgets.Center (hCenter, center)
 import TimeLoop.Types
 import TimeLoop.Search
 import TimeLoop.Pretty
 import Data.List.Split
 
-tableDisplay :: Widget ()
-tableDisplay = center $ renderTable $ prettyTab ((showPos $ head search1) ++ (showUniv portal1)) "        \n\n\n" lims 
+tableDisplay :: Univ -> Widget ()
+tableDisplay u = tableUniv u <=> tableSearch u 
+
+tableUniv :: Univ -> Widget ()
+tableUniv u = hCenter $ renderTable $ prettyTab (showUniv u) "        \n\n\n" lims
+
+tableSearch :: Univ -> Widget ()
+tableSearch u = hBox $ map tablePath paths where
+  paths = take 2 $ search u 6
+
+tablePath :: Path -> Widget ()
+tablePath path = renderTable $ prettyTab (showPos path) "        \n\n\n" lims 
 
 -- Display in a Table the content of the lookup table
 prettyTab :: [(Int, Int, String)] -> String -> Limits -> Table ()
