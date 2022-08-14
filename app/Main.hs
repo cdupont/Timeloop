@@ -18,8 +18,8 @@ main = do
                              "desc"
                              options
                              empty
-  let (pos1 :: Pos) = readPos i
-  let (pos2 :: Pos) = readPos o
+  let (pos1 :: PTD) = readPos i
+  let (pos2 :: PTD) = readPos o
   let univ = [Portal pos1 pos2]
   simpleMain $ tableDisplay univ
 
@@ -29,8 +29,8 @@ options = do
   o <- (strOption (short 'o') :: Parser String)
   return (i, o)
 
-readPos :: String -> Pos
-readPos s = Pos (read x) (read y) (read t) (read d) where
+readPos :: String -> PTD
+readPos s = PTD (Pos (read x) (read y)) (read t) (read d) where
  (x:y:t:d:_) = words s
 
 

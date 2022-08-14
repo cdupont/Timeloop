@@ -13,21 +13,32 @@ instance Show Dir where
 
 type Time = Int
 
--- An Pos is the composition of a place, a time and a direction.
 data Pos = Pos {
   x :: Int,
-  y :: Int,
-  t :: Time,
-  d :: Dir}
+  y :: Int}
   deriving (Eq, Ord, Show, Read)
 
-type Path = [Pos]
+data PTD = PTD {
+  pos  :: Pos,
+  time :: Time,
+  dir  :: Dir}
+  deriving (Eq, Ord, Show, Read)
 
-data Portal = Portal Pos Pos
+-- An Walker is a particle with a position, a time and a direction.
+type Walker = PTD
+
+type Path = [PTD]
+
+-- A portal links two points in space, at specific times and directions.
+data Portal = Portal PTD PTD 
   deriving (Eq, Ord, Show)
 
+--a Univers is considered inifinite, flat (e.g. normal move laws appy), with some portals.
 type Univ = [Portal]
 
+-- The search tree for the trajectory of a particle. The particle can either:
+-- - go straight (that includes going through a portal)
+-- - bump into itself
 data Tree = Straight Tree
           | Bump RelDir Tree Tree
           | Loop Int
@@ -44,14 +55,14 @@ type Limits = ((Int, Int), (Int, Int))
 
 --Entrance portal below, exit in front
 portal1 :: Univ
-portal1 = [Portal (Pos 1 (-1) 2 S) (Pos 2 0 0 W)]
+portal1 = [Portal (PTD (Pos 1 (-1)) 2 S) (PTD (Pos 2 0) 0 W)]
 
 --Entrance portal in front, exit up
 portal2 :: Univ
-portal2 = [Portal (Pos 2 0 2 E) (Pos 1 1 0 S)]
+portal2 = [Portal (PTD (Pos 2 0) 2 E) (PTD (Pos 1 1) 0 S)]
 
-initPos :: Pos
-initPos = Pos 0 0 0 E
+initPos :: PTD
+initPos = PTD (Pos 0 0) 0 E
 
 testTree :: Tree
 testTree = Straight $ Bump Front (Straight $ Straight Stop) Stop

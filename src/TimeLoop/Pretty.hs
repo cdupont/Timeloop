@@ -27,17 +27,17 @@ prettyUniv :: Univ -> Limits -> String
 prettyUniv ps l = pretty "." l $ showUniv ps
 
 showUniv :: Univ -> [(Int, Int, String)] 
-showUniv ps = concatMap (\(Portal (Pos x1 y1 t1 d1) (Pos x2 y2 t2 d2)) -> [(x1, y1, show t1 ++ show d1 ++ "\n□ "), (x2, y2, show t2 ++ show d2 ++ "\n▣ " )]) ps 
+showUniv ps = concatMap (\(Portal (PTD (Pos x1 y1) t1 d1) (PTD (Pos x2 y2) t2 d2)) -> [(x1, y1, show t1 ++ show d1 ++ "\n□ "), (x2, y2, show t2 ++ show d2 ++ "\n▣ " )]) ps 
 
 
-prettyPath :: Limits -> [Pos] -> String
+prettyPath :: Limits -> [PTD] -> String
 prettyPath l ps = pretty "." l $ showPos ps 
 
-showPos :: [Pos] -> [(Int, Int, String)] 
-showPos ps = map (\(Pos x y t d) -> (x, y, show t ++ show d)) ps
+showPos :: [PTD] -> [(Int, Int, String)] 
+showPos ps = map (\(PTD (Pos x y) t d) -> (x, y, show t ++ show d)) ps
 
 
-prettyUnivPath :: Limits -> Univ -> [Pos] -> String
+prettyUnivPath :: Limits -> Univ -> [PTD] -> String
 prettyUnivPath l u ps = pretty "." l $ showPos ps ++ showUniv u
 
 -- Pretty prints a list of coordinates as a matrix.
@@ -59,11 +59,12 @@ padStrings ss = map fill ss where
   widest = 9
   fill str = replicate ((widest +1 - length str) `div` 2) ' ' ++ str ++ replicate ((widest  - length str) `div` 2) ' '
   
-getLimits :: [Pos] -> Limits 
-getLimits ps = ((minX, minY), (maxX, maxY)) where
-  (Pos maxX _ _ _) = maximumBy (\(Pos x1 _ _ _) (Pos x2 _ _ _) -> compare x1 x2) ps
-  (Pos minX _ _ _) = minimumBy (\(Pos x1 _ _ _) (Pos x2 _ _ _) -> compare x1 x2) ps
-  (Pos _ maxY _ _) = maximumBy (\(Pos _ y1 _ _) (Pos _ y2 _ _) -> compare y1 y2) ps
-  (Pos _ minY _ _) = minimumBy (\(Pos _ y1 _ _) (Pos _ y2 _ _) -> compare y1 y2) ps
+getLimits :: [PTD] -> Limits 
+getLimits ptds = ((minX, minY), (maxX, maxY)) where
+  (Pos maxX _) = maximumBy (\(Pos x1 _) (Pos x2 _) -> compare x1 x2) ps
+  (Pos minX _) = minimumBy (\(Pos x1 _) (Pos x2 _) -> compare x1 x2) ps
+  (Pos _ maxY) = maximumBy (\(Pos _ y1) (Pos _ y2) -> compare y1 y2) ps
+  (Pos _ minY) = minimumBy (\(Pos _ y1) (Pos _ y2) -> compare y1 y2) ps
+  ps = map (\(PTD p _ _) -> p) ptds
 
 

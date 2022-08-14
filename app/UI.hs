@@ -18,7 +18,7 @@ tableUniv u = hCenter $ renderTable $ prettyTab (showUniv u) "        \n\n\n" li
 
 tableSearch :: Univ -> Widget ()
 tableSearch u = hBox $ map tablePath paths where
-  paths = take 2 $ search u 6
+  paths = take 2 $ search initPos u 6
 
 tablePath :: Path -> Widget ()
 tablePath path = renderTable $ prettyTab (showPos path) "        \n\n\n" lims 

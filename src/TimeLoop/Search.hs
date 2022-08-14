@@ -16,76 +16,98 @@ import Control.Monad
 import TimeLoop.Types
 import TimeLoop.Pretty
 
-move :: Univ -> Pos -> Pos
-move u p = case find (\(Portal a _) -> a == p) u of 
-                   Just (Portal _ p) -> p
-                   Nothing -> simpleMove p
+-- Search the possible paths for a walker in a given universe, until a max depth.
+search :: Walker -> Univ -> Int -> [Path]
+search p u depth = filter (\l -> length l == depth) $ getAllPaths p u
 
-simpleMove :: Pos -> Pos
-simpleMove (Pos x y t N) = Pos x (y+1) (t+1) N
-simpleMove (Pos x y t S) = Pos x (y-1) (t+1) S
-simpleMove (Pos x y t E) = Pos (x+1) y (t+1) E
-simpleMove (Pos x y t W) = Pos (x-1) y (t+1) W
+-- get all possible paths in a universe for a given walker
+getAllPaths :: Walker -> Univ -> [Path]
+getAllPaths p u = join $ map getPaths $ map (\t -> getPathSegments t p u) allTrees
 
-turn :: RelDir -> Pos -> Pos
-turn rd (Pos x y t d) = Pos x y t (turn' rd d)
+-- Generate the path segments for a tree in the given universe, using the start position
+getPathSegments :: Tree -> Walker -> Univ -> [PathSegment]
+getPathSegments Stop p u = [[p]]
+getPathSegments (Straight t) p u      =  updateHead (p :) (getPathSegments t  (move u p) u)
+getPathSegments (Bump from t1 t2) p u = (updateHead (p :) (getPathSegments t1 (move u (turn Right_ p)) u)) ++
+                                        (updateHead (p':) (getPathSegments t2 (move u (turn Right_ p')) u)) where
+                                        p' = turn Back $ turn from p
 
-turn' :: RelDir -> Dir -> Dir
-turn' Right_ N = E 
-turn' Right_ E = S 
-turn' Right_ S = W 
-turn' Right_ W = N
-turn' Back a   = turn' Right_ $ turn' Right_ a
-turn' Left_ a  = turn' Right_ $ turn' Back a
-turn' Front a  = a
-
-getPaths :: Tree -> Pos -> Univ -> [[Pos]]
-getPaths (Straight t) p u      =  updateHead (p :) (getPaths t  (move u p) u)
-getPaths (Bump from t1 t2) p u = (updateHead (p :) (getPaths t1 (move u (turn Right_ p)) u)) ++
-                                 (updateHead (p':) (getPaths t2 (move u (turn Right_ p')) u)) where
-                                 p' = turn Back $ turn from p
-getPaths (Loop i) p u = [[p]] 
-getPaths Stop p u = [[p]]
-
-getPaths' :: Pos -> Univ -> Tree -> [[Pos]]
-getPaths' p u t = getPaths t p u
-
-allTrees :: [Tree]
-allTrees = runOmega allTrees'
-
-allTrees' :: Omega Tree
-allTrees' = pure Stop 
-       <|> Straight    <$> allTrees'
-       <|> Bump Front  <$> allTrees' <*> allTrees'
-       <|> Bump Right_ <$> allTrees' <*> allTrees'
-       <|> Bump Left_  <$> allTrees' <*> allTrees'
+-- get all possible paths from a list of path segments
+getPaths :: [PathSegment] -> [Path]
+getPaths ps = catMaybes $ map getPath $ permutations ps 
 
 
-allPaths :: Pos -> Univ -> [Path]
-allPaths p u = join $ map chains $ map (getPaths' p u) allTrees
-
-chains :: [Path] -> [Path]
-chains ps = catMaybes $ map joinPaths $ permutations ps 
-
-joinPaths :: [Path] -> Maybe Path
-joinPaths ps = loop ps 
+-- Find out if path segments matches in order to create a long path
+-- The end of a segment should match the beginning of the next
+-- TODO: use a fold
+getPath :: [PathSegment] -> Maybe Path
+getPath ps = loop ps 
   where
     loop []       = Nothing 
     loop [a]      = Just a
     loop (x:y:zs) = if (last x == head y) 
                     then loop ((x ++ (tail y)) : zs)
                     else Nothing
+-- Generate all tree from the Omega monad.
+allTrees :: [Tree]
+allTrees = runOmega allTrees'
+
+-- The Omega monad performs a Breadth first generation of the search tree.
+-- It will be used lazily by the function getPaths.
+-- For each level of the tree, it generates the leaves and the nodes, before going to the next level.
+-- The possibilities generated are either:
+-- - to stop (end of the trajectory)
+-- - go straight (no collision)
+-- - bump into itself.
+-- In the case of a bump, the other "self" can come from different directions.
+-- The tree is valid for a given universe only if one trajectory comes back to the bump location (e.g. goign through a time travel portal).
+allTrees' :: Omega Tree
+allTrees' = pure Stop 
+        <|> Straight    <$> allTrees'
+        <|> Bump Front  <$> allTrees' <*> allTrees'
+        <|> Bump Right_ <$> allTrees' <*> allTrees'
+        <|> Bump Left_  <$> allTrees' <*> allTrees'
+
+
+
+-- Move one step in the universe given.
+move :: Univ -> Walker -> Walker
+move u p = case find (\(Portal a _) -> a == p) u of 
+                   Just (Portal _ p) -> p
+                   Nothing -> simpleMove p
+
+-- Move one step in a flat universe.
+simpleMove :: Walker -> Walker
+simpleMove (PTD (Pos x y) t N) = PTD (Pos x (y+1)) (t+1) N
+simpleMove (PTD (Pos x y) t S) = PTD (Pos x (y-1)) (t+1) S
+simpleMove (PTD (Pos x y) t E) = PTD (Pos (x+1) y) (t+1) E
+simpleMove (PTD (Pos x y) t W) = PTD (Pos (x-1) y) (t+1) W
+
+-- Turn a walker using a relative direction
+turn :: RelDir -> Walker -> Walker
+turn rd (PTD p t d) = PTD p t (turn' rd d)
+
+-- Turn an absolute direction using a relative one
+turn' :: RelDir -> Dir -> Dir
+turn' Right_ N = E 
+turn' Right_ E = S 
+turn' Right_ S = W 
+turn' Right_ W = N
+turn' Back a   = turn' Right_ $ turn' Right_ a
+turn' Left_ a  = turn' Right_ $ turn' Right_ $ turn' Right_ a
+turn' Front a  = a
+
+-- A path segment is a section of path for a given particle
+type PathSegment = Path
+
 
 updateHead _ []       = []
 updateHead f (a : as) = f a : as
 
-search :: Univ -> Int -> [Path]
-search u depth = filter (\l -> length l == depth) $ allPaths initPos u
-
 -- sample searchs
 
 search1 :: [Path]
-search1 = filter (\l -> length l == 6) $ allPaths initPos portal1
+search1 = search initPos portal1 6
 
 pretty1 :: String
 pretty1 = concatMap (prettyUnivPath lims portal1) search1
@@ -94,12 +116,5 @@ pretty1' :: [String]
 pretty1' = map (\t -> prettyUnivPath lims portal1 $ filterTime (head search1) t) [0..] 
 
 filterTime :: Path -> Time -> Path
-filterTime ps t = filter (\(Pos _ _ t' _) -> t == t') ps
-
-stepper :: IO ()
-stepper = forM_ pretty1' (\s -> do
-  getChar
-  putStr "\ESC[2J"
-  putStrLn s)
-  
+filterTime ps t = filter (\(PTD _ t' _) -> t == t') ps
 
