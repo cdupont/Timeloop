@@ -3,15 +3,7 @@ module TimeLoop.Pretty where
 
 import Prelude hiding (Left, Right)
 import Data.List
-import Data.Ord
-import Data.Matrix hiding ((<|>))
-import qualified Data.Vector             as V
-import Data.Maybe (listToMaybe, catMaybes)
-import Control.Monad ((>>), guard, join)
-import Control.Monad.Omega
-import Control.Applicative
 import Data.List.Split
-import Control.Monad
 import TimeLoop.Types
 
 -- * Pretty prints *

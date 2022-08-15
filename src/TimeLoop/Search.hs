@@ -5,16 +5,14 @@ module TimeLoop.Search where
 import Prelude hiding (Left, Right)
 import Data.List
 import Data.Ord
-import Data.Matrix hiding ((<|>))
-import qualified Data.Vector             as V
 import Data.Maybe (listToMaybe, catMaybes)
 import Control.Monad ((>>), guard, join)
-import Control.Monad.Omega
 import Control.Applicative
-import Data.List.Split
 import Control.Monad
 import TimeLoop.Types
 import TimeLoop.Pretty
+import Control.Monad.WeightedSearch as W
+
 
 -- Search the possible paths for a walker in a given universe, until a max depth.
 search :: Walker -> Univ -> Int -> [Path]
@@ -22,7 +20,7 @@ search p u depth = filter (\l -> length l == depth) $ getAllPaths p u
 
 -- get all possible paths in a universe for a given walker
 getAllPaths :: Walker -> Univ -> [Path]
-getAllPaths p u = join $ map getPaths $ map (\t -> getPathSegments t p u) allTrees
+getAllPaths p u = join $ map getPaths $ map (\t -> getPathSegments t p u) (take (7^6) allTrees)
 
 -- Generate the path segments for a tree in the given universe, using the start position
 getPathSegments :: Tree -> Walker -> Univ -> [PathSegment]
@@ -49,7 +47,7 @@ getPath ps = foldM f [] ps where
 
 -- Generate all tree from the Omega monad.
 allTrees :: [Tree]
-allTrees = runOmega allTrees'
+allTrees = W.toList allTrees'
 
 -- The Omega monad performs a Breadth first generation of the search tree.
 -- It will be used lazily by the function getPaths.
@@ -60,12 +58,19 @@ allTrees = runOmega allTrees'
 -- - bump into itself.
 -- In the case of a bump, the other "self" can come from different directions.
 -- The tree is valid for a given universe only if one trajectory comes back to the bump location (e.g. goign through a time travel portal).
-allTrees' :: Omega Tree
+--allTrees' :: Omega Tree
+--allTrees' = pure Stop 
+--        <|> (Straight    <$> allTrees')
+--        <|> (Bump Front  <$> allTrees' <*> allTrees')
+--        <|> (Bump Right_ <$> allTrees' <*> allTrees')
+--        <|> (Bump Left_  <$> allTrees' <*> allTrees')
+
+allTrees' :: W.T Int Tree
 allTrees' = pure Stop 
-        <|> (Straight    <$> allTrees')
-        <|> (Bump Front  <$> allTrees' <*> allTrees')
-        <|> (Bump Right_ <$> allTrees' <*> allTrees')
-        <|> (Bump Left_  <$> allTrees' <*> allTrees')
+        <|> weight 1 (Straight    <$> allTrees')
+        <|> weight 6 (Bump Front  <$> allTrees' <*> allTrees')
+        <|> weight 6 (Bump Right_ <$> allTrees' <*> allTrees')
+        <|> weight 6 (Bump Left_  <$> allTrees' <*> allTrees')
 
 -- Move one step in the universe given.
 move :: Univ -> Walker -> Walker

@@ -10,6 +10,7 @@ import Options.Applicative.Simple
 import Brick (simpleMain)
 import UI
 import TimeLoop.Types
+import TimeLoop.Search
 
 main :: IO ()
 main = do 
@@ -22,6 +23,7 @@ main = do
   let (pos2 :: PTD) = readPos o
   let univ = [Portal pos1 pos2]
   simpleMain $ tableDisplay univ
+  --putStrLn $ show $ take 2 $ search1
 
 options :: Parser (String, String)
 options = do
