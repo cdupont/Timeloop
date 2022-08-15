@@ -10,16 +10,20 @@ import TimeLoop.Search
 import TimeLoop.Pretty
 import Data.List.Split
 
+-- Display the whole interface
 tableDisplay :: Univ -> Widget ()
 tableDisplay u = tableUniv u <=> tableSearch u 
 
+-- Display the universe initial state 
 tableUniv :: Univ -> Widget ()
 tableUniv u = hCenter $ renderTable $ prettyTab (showUniv u) "        \n\n\n" lims
 
+-- Display the various solutions
 tableSearch :: Univ -> Widget ()
 tableSearch u = hBox $ map tablePath paths where
-  paths = take 2 $ search initPos u 6
+  paths = take 3 $ search initPos u 6
 
+-- display a single path
 tablePath :: Path -> Widget ()
 tablePath path = renderTable $ prettyTab (showPos path) "        \n\n\n" lims 
 

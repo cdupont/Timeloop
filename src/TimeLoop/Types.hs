@@ -27,7 +27,12 @@ data PTD = PTD {
 -- An Walker is a particle with a position, a time and a direction.
 type Walker = PTD
 
+-- Complete path followed by a walker
 type Path = [PTD]
+
+-- A path segment is a section of path for a given particle
+type PathSegment = Path
+
 
 -- A portal links two points in space, at specific times and directions.
 data Portal = Portal PTD PTD 

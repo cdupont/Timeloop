@@ -39,15 +39,14 @@ getPaths ps = catMaybes $ map getPath $ permutations ps
 
 -- Find out if path segments matches in order to create a long path
 -- The end of a segment should match the beginning of the next
--- TODO: use a fold
 getPath :: [PathSegment] -> Maybe Path
-getPath ps = loop ps 
-  where
-    loop []       = Nothing 
-    loop [a]      = Just a
-    loop (x:y:zs) = if (last x == head y) 
-                    then loop ((x ++ (tail y)) : zs)
-                    else Nothing
+getPath ps = foldM f [] ps where
+  f [] a = Just a
+  f a [] = Just a
+  f x y = if (last x == head y)
+            then Just $ x ++ (tail y)
+            else Nothing
+
 -- Generate all tree from the Omega monad.
 allTrees :: [Tree]
 allTrees = runOmega allTrees'
@@ -63,12 +62,10 @@ allTrees = runOmega allTrees'
 -- The tree is valid for a given universe only if one trajectory comes back to the bump location (e.g. goign through a time travel portal).
 allTrees' :: Omega Tree
 allTrees' = pure Stop 
-        <|> Straight    <$> allTrees'
-        <|> Bump Front  <$> allTrees' <*> allTrees'
-        <|> Bump Right_ <$> allTrees' <*> allTrees'
-        <|> Bump Left_  <$> allTrees' <*> allTrees'
-
-
+        <|> (Straight    <$> allTrees')
+        <|> (Bump Front  <$> allTrees' <*> allTrees')
+        <|> (Bump Right_ <$> allTrees' <*> allTrees')
+        <|> (Bump Left_  <$> allTrees' <*> allTrees')
 
 -- Move one step in the universe given.
 move :: Univ -> Walker -> Walker
@@ -96,9 +93,6 @@ turn' Right_ W = N
 turn' Back a   = turn' Right_ $ turn' Right_ a
 turn' Left_ a  = turn' Right_ $ turn' Right_ $ turn' Right_ a
 turn' Front a  = a
-
--- A path segment is a section of path for a given particle
-type PathSegment = Path
 
 
 updateHead _ []       = []
