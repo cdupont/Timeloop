@@ -9,6 +9,29 @@ import TimeLoop.Types
 import TimeLoop.Search
 import TimeLoop.Pretty
 import Data.List.Split
+import qualified Graphics.Vty as V
+
+data UI = UI {
+  univ :: Univ,
+  portalIndex :: Int,
+  cursorPos :: Pos}
+
+app :: App UI () ()
+app = App
+  { appDraw         = drawUI
+  , appChooseCursor = neverShowCursor
+  , appHandleEvent  = handleEvent
+  , appStartEvent   = return ()
+  , appAttrMap      = const $ attrMap V.defAttr []
+  }
+
+drawUI :: UI -> [Widget ()]
+drawUI (UI u _ _)= [tableUniv u]
+
+handleEvent  :: BrickEvent () () -> EventM () UI ()
+handleEvent (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt
+handleEvent (VtyEvent (V.EvKey V.KEsc        [])) = halt
+handleEvent _ = return ()
 
 -- Display the whole interface
 tableDisplay :: Univ -> Widget ()

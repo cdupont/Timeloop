@@ -15,9 +15,10 @@ description:         Please see the README on GitHub at <https://github.com/gith
 dependencies:
 - base >= 4.7 && < 5
 - optparse-simple
-- brick >= 0.69.1
+- brick >= 1.0
 - weighted-search
 - split
+- vty
 
 library:
   source-dirs: src
