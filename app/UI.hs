@@ -28,28 +28,21 @@ app = App
   }
 
 drawUI :: UI -> [Widget ()]
-drawUI (UI u _ _)= [tableUniv u]
+drawUI (UI u _ _)= [tableDisplay u]
 
 handleEvent  :: BrickEvent () () -> EventM () UI ()
 handleEvent (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt
 handleEvent (VtyEvent (V.EvKey V.KEsc        [])) = halt
-handleEvent (VtyEvent (V.EvKey V.KRight      [])) = movePortal E
-handleEvent (VtyEvent (V.EvKey V.KLeft       [])) = movePortal W
-handleEvent (VtyEvent (V.EvKey V.KUp         [])) = movePortal N 
-handleEvent (VtyEvent (V.EvKey V.KDown       [])) = movePortal S 
-handleEvent (VtyEvent (V.EvKey (V.KChar 'r') [])) = rotatePortal 
-handleEvent (VtyEvent (V.EvKey (V.KChar '+') [])) = changeTimePortal True
-handleEvent (VtyEvent (V.EvKey (V.KChar '-') [])) = changeTimePortal False
+handleEvent (VtyEvent (V.EvKey V.KRight      [])) = modify $ move' E
+handleEvent (VtyEvent (V.EvKey V.KLeft       [])) = modify $ move' W
+handleEvent (VtyEvent (V.EvKey V.KUp         [])) = modify $ move' N 
+handleEvent (VtyEvent (V.EvKey V.KDown       [])) = modify $ move' S 
+handleEvent (VtyEvent (V.EvKey (V.KChar 'r') [])) = modify $ rotate 
+handleEvent (VtyEvent (V.EvKey (V.KChar '+') [])) = modify $ changeTime True 
+handleEvent (VtyEvent (V.EvKey (V.KChar '-') [])) = modify $ changeTime False
+handleEvent (VtyEvent (V.EvKey (V.KChar ' ') [])) = modify $ changePortal
 handleEvent _ = return ()
 
-movePortal :: Dir -> EventM () UI ()
-movePortal d = modify $ move' d
-
-rotatePortal :: EventM () UI ()
-rotatePortal = modify $ rotate 
-
-changeTimePortal :: Bool -> EventM () UI ()
-changeTimePortal b = modify $ changeTime b 
 
 move' :: Dir -> UI -> UI
 move' d (UI [(Portal p1 p2)] index Entry) = UI [Portal (movePos d p1) p2] index Entry 
@@ -72,6 +65,10 @@ changeTime b (UI [(Portal p1 p2)] index Exit)  = UI [Portal p1 (changeTime' b p2
 changeTime' :: Bool -> PTD -> PTD
 changeTime' True  (PTD p t d) = PTD p (t+1) d
 changeTime' False (PTD p t d) = PTD p (t-1) d
+
+changePortal :: UI -> UI
+changePortal (UI ps i Entry) = UI ps i Exit 
+changePortal (UI ps i Exit)  = UI ps i Entry 
 
 -- Display the whole interface
 tableDisplay :: Univ -> Widget ()
