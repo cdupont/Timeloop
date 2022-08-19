@@ -7,23 +7,33 @@
 module Main where
 
 import Options.Applicative.Simple
-import Brick (simpleMain)
+import Brick (simpleMain, defaultMain, hBox)
 import UI
 import TimeLoop.Types
 import TimeLoop.Search
 
+
 main :: IO ()
 main = do 
-  ((i,o),()) <- simpleOptions "ver"
-                             "header"
-                             "desc"
-                             options
-                             empty
-  let (pos1 :: PTD) = readPos i
-  let (pos2 :: PTD) = readPos o
-  let univ = [Portal pos1 pos2]
-  simpleMain $ tableDisplay univ
+  --((i,o),()) <- simpleOptions "ver"
+  --                           "header"
+  --                           "desc"
+  --                           options
+  --                           empty
+  --let (pos1 :: PTD) = readPos i
+  --let (pos2 :: PTD) = readPos o
+  --let univ = [Portal pos1 pos2]
+
+  let initState = UI portal1 1 Entry 
+  _ <- defaultMain app initState
+
+  putStrLn "Goodbye"
+
+  --simpleMain $ tableDisplay univ
   --putStrLn $ show $ take 2 $ search1
+
+
+
 
 options :: Parser (String, String)
 options = do
