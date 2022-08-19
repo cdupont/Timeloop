@@ -37,12 +37,19 @@ handleEvent (VtyEvent (V.EvKey V.KRight      [])) = movePortal E
 handleEvent (VtyEvent (V.EvKey V.KLeft       [])) = movePortal W
 handleEvent (VtyEvent (V.EvKey V.KUp         [])) = movePortal N 
 handleEvent (VtyEvent (V.EvKey V.KDown       [])) = movePortal S 
+handleEvent (VtyEvent (V.EvKey (V.KChar 'r') [])) = rotatePortal 
+handleEvent (VtyEvent (V.EvKey (V.KChar '+') [])) = changeTimePortal True
+handleEvent (VtyEvent (V.EvKey (V.KChar '-') [])) = changeTimePortal False
 handleEvent _ = return ()
 
 movePortal :: Dir -> EventM () UI ()
-movePortal d = do  
-  ui <- get 
-  put $ move' d ui
+movePortal d = modify $ move' d
+
+rotatePortal :: EventM () UI ()
+rotatePortal = modify $ rotate 
+
+changeTimePortal :: Bool -> EventM () UI ()
+changeTimePortal b = modify $ changeTime b 
 
 move' :: Dir -> UI -> UI
 move' d (UI [(Portal p1 p2)] index Entry) = UI [Portal (movePos d p1) p2] index Entry 
@@ -53,6 +60,18 @@ movePos N (PTD (Pos x y) t d) = PTD (Pos x (y+1)) t d
 movePos S (PTD (Pos x y) t d) = PTD (Pos x (y-1)) t d 
 movePos E (PTD (Pos x y) t d) = PTD (Pos (x+1) y) t d 
 movePos W (PTD (Pos x y) t d) = PTD (Pos (x-1) y) t d 
+
+rotate :: UI -> UI
+rotate (UI [(Portal p1 p2)] index Entry) = UI [Portal (turn Right_ p1) p2] index Entry 
+rotate (UI [(Portal p1 p2)] index Exit)  = UI [Portal p1 (turn Right_ p2)] index Exit
+
+changeTime :: Bool -> UI -> UI
+changeTime b (UI [(Portal p1 p2)] index Entry) = UI [Portal (changeTime' b p1) p2] index Entry 
+changeTime b (UI [(Portal p1 p2)] index Exit)  = UI [Portal p1 (changeTime' b p2)] index Exit
+
+changeTime' :: Bool -> PTD -> PTD
+changeTime' True  (PTD p t d) = PTD p (t+1) d
+changeTime' False (PTD p t d) = PTD p (t-1) d
 
 -- Display the whole interface
 tableDisplay :: Univ -> Widget ()
