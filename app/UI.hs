@@ -6,6 +6,7 @@ import Brick
 import Brick.Widgets.Table
 import Brick.Widgets.Center (hCenter, center)
 import Brick.Widgets.Border
+import Brick.AttrMap
 import TimeLoop.Types
 import TimeLoop.Search
 import TimeLoop.Pretty
@@ -13,17 +14,22 @@ import Data.List.Split
 import Data.List
 import qualified Data.Map as M
 import qualified Graphics.Vty as V
+import qualified Graphics.Vty.Attributes as VA
 
 data ItemType = EntryPortal | ExitPortal | Walker
+  deriving Eq
 
 data Item = Item ItemType Time Dir
 
 type ItemMap = M.Map Pos [Item]
 
+data SelItem = SelItem {
+  itemType :: ItemType,
+  itemIndex :: Int}
+
 data UI = UI {
   univ :: Univ,
-  portalIndex :: Int,
-  portalType :: ItemType}
+  selectedItem :: SelItem}
 
 -- * Main app
 
@@ -33,23 +39,20 @@ app = App
   , appChooseCursor = neverShowCursor
   , appHandleEvent  = handleEvent
   , appStartEvent   = return ()
-  , appAttrMap      = const $ attrMap V.defAttr []
+  , appAttrMap      = const $ theMap
   }
 
 -- * UI
 
 -- Display the whole interface
 drawUI :: UI -> [Widget ()]
-drawUI (UI u _ _)= [drawUI' u]
-
-drawUI' :: Univ -> Widget ()
-drawUI' u = (center $ border $ drawItems (getItemsUniv u) lims)
-         <=> drawSearchPanel u
+drawUI (UI u sel)= singleton $ (center $ border $ drawItems (getItemsUniv u) lims (Just sel))
+                                <=> drawSearchPanel u
 
 -- Display the various solutions
 drawSearchPanel :: Univ -> Widget ()
 drawSearchPanel u = hBox $ map drawPath paths where
-  drawPath path = border $ drawItems (getItemsPath path) lims 
+  drawPath path = border $ drawItems (getItemsPath path) lims Nothing
   paths = take 3 $ search initPos u 6
 
 getItemsUniv :: Univ -> ItemMap
@@ -59,21 +62,28 @@ getItemsUniv ps = M.unionsWith (<>) (concatMap (\(Portal (PTD p1 t1 d1) (PTD p2 
 getItemsPath :: Path -> ItemMap
 getItemsPath p = M.fromList $ map (\(PTD p t d) -> (p, [Item Walker t d])) p
 
-drawItems :: ItemMap -> Limits -> Widget ()
-drawItems is ((minX, minY), (maxX, maxY)) = vBox $ map row [maxY, maxY-1 .. minY] where
-  row y = hBox $ map (\x -> getWidget (Pos x y) is) [minX..maxX]
+drawItems :: ItemMap -> Limits -> Maybe SelItem -> Widget ()
+drawItems is ((minX, minY), (maxX, maxY)) sel = vBox $ map row [maxY, maxY-1 .. minY] where
+  row y = hBox $ map (\x -> getWidget (Pos x y) is sel) [minX..maxX]
 
-getWidget :: Pos -> ItemMap -> Widget ()
-getWidget p is = case M.lookup p is of
-  Just (item : _) -> drawItem item
+getWidget :: Pos -> ItemMap -> Maybe SelItem -> Widget ()
+getWidget p is sel = case M.lookup p is of
+  Just (item : _) -> drawItem item (getItemType sel)
   Nothing         -> emptyCell
+ where
+   getItemType (Just (SelItem it _)) = Just it
+   getItemType Nothing = Nothing
 
-drawItem :: Item -> Widget ()
-drawItem (Item EntryPortal t d) = border $ (str $ show d ++ "□ " ++ show t) 
+drawItem :: Item -> Maybe ItemType -> Widget ()
+drawItem (Item it t d) sel = selectAttr $ drawItem' $ Item it t d where
+  selectAttr = if (Just it) == sel then withAttr blink else id
+
+drawItem' :: Item -> Widget ()
+drawItem' (Item EntryPortal t d) = border $ (str $ show d ++ "□ " ++ show t) 
                                      <=> (str "    ")
-drawItem (Item ExitPortal t d)  = border $ (str $ show d ++ "▣ " ++ show t)
+drawItem' (Item ExitPortal t d)  = border $ (str $ show d ++ "▣ " ++ show t)
                                      <=> (str "    ") 
-drawItem (Item Walker t d)      = (str "     ") 
+drawItem' (Item Walker t d)      = (str "     ") 
                                 <=> (str $ show d ++ show t) 
                                 <=> (str "     ")
 
@@ -101,8 +111,8 @@ handleEvent _ = return ()
 
 
 move' :: Dir -> UI -> UI
-move' d (UI [(Portal p1 p2)] index EntryPortal) = UI [Portal (movePos d p1) p2] index EntryPortal 
-move' d (UI [(Portal p1 p2)] index ExitPortal)  = UI [Portal p1 (movePos d p2)] index ExitPortal
+move' d (UI [(Portal p1 p2)] (SelItem EntryPortal i)) = UI [Portal (movePos d p1) p2] (SelItem EntryPortal i)
+move' d (UI [(Portal p1 p2)] (SelItem ExitPortal i))  = UI [Portal p1 (movePos d p2)] (SelItem ExitPortal i)
 
 movePos :: Dir -> PTD -> PTD
 movePos N (PTD (Pos x y) t d) = PTD (Pos x (y+1)) t d 
@@ -111,27 +121,30 @@ movePos E (PTD (Pos x y) t d) = PTD (Pos (x+1) y) t d
 movePos W (PTD (Pos x y) t d) = PTD (Pos (x-1) y) t d 
 
 rotate :: UI -> UI
-rotate (UI [(Portal p1 p2)] index EntryPortal) = UI [Portal (turn Right_ p1) p2] index EntryPortal
-rotate (UI [(Portal p1 p2)] index ExitPortal)  = UI [Portal p1 (turn Right_ p2)] index ExitPortal
+rotate (UI [(Portal p1 p2)] (SelItem EntryPortal i)) = UI [Portal (turn Right_ p1) p2] (SelItem EntryPortal i)
+rotate (UI [(Portal p1 p2)] (SelItem ExitPortal i))  = UI [Portal p1 (turn Right_ p2)] (SelItem ExitPortal i)
 
 changeTime :: Bool -> UI -> UI
-changeTime b (UI [(Portal p1 p2)] index EntryPortal) = UI [Portal (changeTime' b p1) p2] index EntryPortal 
-changeTime b (UI [(Portal p1 p2)] index ExitPortal)  = UI [Portal p1 (changeTime' b p2)] index ExitPortal
+changeTime b (UI [(Portal p1 p2)] (SelItem EntryPortal i)) = UI [Portal (changeTime' b p1) p2] (SelItem EntryPortal i)
+changeTime b (UI [(Portal p1 p2)] (SelItem ExitPortal i))  = UI [Portal p1 (changeTime' b p2)] (SelItem ExitPortal i)
 
 changeTime' :: Bool -> PTD -> PTD
 changeTime' True  (PTD p t d) = PTD p (t+1) d
 changeTime' False (PTD p t d) = PTD p (t-1) d
 
 changePortal :: UI -> UI
-changePortal (UI ps i EntryPortal) = UI ps i ExitPortal
-changePortal (UI ps i ExitPortal)  = UI ps i EntryPortal
+changePortal (UI ps (SelItem EntryPortal i)) = UI ps (SelItem ExitPortal i)
+changePortal (UI ps (SelItem ExitPortal i))  = UI ps (SelItem EntryPortal i)
 
 
 -- * Attributes
 
+blink :: AttrName
+blink = attrName "Blink"
+
 theMap :: AttrMap
 theMap = attrMap
   V.defAttr
-  [
+  [(blink, VA.withStyle VA.defAttr VA.blink)    
   ]
 

@@ -25,7 +25,7 @@ main = do
   --let univ = [Portal pos1 pos2]
 
   putStrLn "Loading"
-  let initState = UI portal1 1 EntryPortal 
+  let initState = UI portal1 (SelItem EntryPortal 1)
   _ <- defaultMain app initState
 
   putStrLn "Goodbye"
