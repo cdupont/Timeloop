@@ -19,6 +19,7 @@ dependencies:
 - weighted-search
 - split
 - vty
+- containers
 
 library:
   source-dirs: src

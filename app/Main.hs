@@ -24,13 +24,11 @@ main = do
   --let (pos2 :: PTD) = readPos o
   --let univ = [Portal pos1 pos2]
 
-  let initState = UI portal1 1 Entry 
+  putStrLn "Loading"
+  let initState = UI portal1 1 EntryPortal 
   _ <- defaultMain app initState
 
   putStrLn "Goodbye"
-
-  --simpleMain $ tableDisplay univ
-  --putStrLn $ show $ take 2 $ search1
 
 
 

@@ -33,13 +33,16 @@ type Path = [PTD]
 -- A path segment is a section of path for a given particle
 type PathSegment = Path
 
-
 -- A portal links two points in space, at specific times and directions.
 data Portal = Portal PTD PTD 
   deriving (Eq, Ord, Show)
 
---a Univers is considered inifinite, flat (e.g. normal move laws appy), with some portals.
+-- A Univers is infinite and flat space (e.g. normal move laws appy).
+-- It contains some portals and some walkers.
 type Univ = [Portal]
+--data Univ = Univ {
+--  portals :: [Portal],
+--  walkers :: [Walker]}
 
 -- The search tree for the trajectory of a particle. The particle can either:
 -- - go straight (that includes going through a portal)
