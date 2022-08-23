@@ -7,11 +7,14 @@
 module Main where
 
 import Options.Applicative.Simple
-import Brick (simpleMain, defaultMain, hBox)
+import Brick (customMain, hBox)
 import UI
 import TimeLoop.Types
 import TimeLoop.Search
-
+import Brick.BChan
+import qualified Graphics.Vty as V
+import Control.Concurrent (threadDelay, forkIO)
+import Control.Monad (void, forever)
 
 main :: IO ()
 main = do 
@@ -23,10 +26,15 @@ main = do
   --let (pos1 :: PTD) = readPos i
   --let (pos2 :: PTD) = readPos o
   --let univ = [Portal pos1 pos2]
-
+  chan <- newBChan 10
+  void . forkIO $ forever $ do
+    writeBChan chan Tick
+    threadDelay 1000000 
   putStrLn "Loading"
-  let initState = UI portal1 (SelItem EntryPortal 1)
-  _ <- defaultMain app initState
+  let initState = UI portal1 (SelItem EntryPortal 1) 0
+  let buildVty = V.mkVty V.defaultConfig
+  initialVty <- buildVty
+  customMain initialVty buildVty (Just chan) app initState
 
   putStrLn "Goodbye"
 
