@@ -15,6 +15,7 @@ import Data.List
 import qualified Data.Map as M
 import qualified Graphics.Vty as V
 import qualified Graphics.Vty.Attributes as VA
+import Text.Printf
 
 data ItemType = EntryPortal | ExitPortal | Walker
   deriving Eq
@@ -76,7 +77,7 @@ drawItems is ((minX, minY), (maxX, maxY)) sel st = vBox $ map row [maxY, maxY-1 
 getWidget :: Pos -> ItemMap -> Maybe SelItem -> Step -> Widget ()
 getWidget p is sel st = case M.lookup p is of
   Just (item : _) -> drawItem item (getItemType sel) st
-  Nothing         -> emptyCell
+  Nothing         -> str tileEmpty
  where
    getItemType (Just (SelItem it _)) = Just it
    getItemType Nothing = Nothing
@@ -86,22 +87,73 @@ drawItem (Item it t d) sel st = selectAttr $ drawItem' (Item it t d) st where
   selectAttr = if (Just it) == sel then withAttr blink else id
 
 drawItem' :: Item -> Step -> Widget ()
-drawItem' (Item EntryPortal t d) _ = border $ (str $ show d ++ "□ " ++ show t) 
-                                     <=> (str "    ")
-drawItem' (Item ExitPortal t d) _ = border $ (str $ show d ++ "▣ " ++ show t)
-                                     <=> (str "    ") 
-drawItem' (Item Walker t d) st  = dimAttr st t $
-                                     (str "     ") 
-                                 <=> (str $ show d ++ show t) 
-                                 <=> (str "     ") where
+drawItem' (Item EntryPortal t d) _ = str $ tilePortal True d t 
+drawItem' (Item ExitPortal t d) _ = str $ tilePortal False d t 
+drawItem' (Item Walker t d) st  = dimAttr st t $ str $ tileWalker d t where
   dimAttr st t = if (st `mod` 6) /= t then withAttr dim else id
 
-emptyCell :: Widget ()
-emptyCell = str "       " 
-        <=> str "       " 
-        <=> str "       " 
-        <=> str "       " 
+emptyCell = undefined
 
+tileEmpty :: String 
+tileEmpty =  "      \n" ++
+             "      \n" ++ 
+             "      " 
+
+
+tilePortal :: Bool -> Dir -> Time -> String
+tilePortal in_ dir time =  "┌─" ++ n ++ "─┐\n" ++
+                            w ++   c  ++ e ++ "\n" ++
+                           "└─" ++ s ++ "─┘" where
+  w = if dir == W then showE dir else "│ " 
+  e = if dir == E then showE dir else " │" 
+  n = if dir == N then showE dir else "──" 
+  s = if dir == S then showE dir else "──" 
+  c = printf "%2d" time
+  showE = if in_ then show . (turn' Back) else show
+
+
+tileWalker :: Dir -> Time -> String
+tileWalker dir time = "    " ++ t ++ "\n" ++
+                      "  " ++ c ++ "  \n" ++
+                      "      \n" where
+  c = show dir 
+  t = printf "%2d" time
+
+tileCollision :: Dir -> Dir -> Time -> String
+tileCollision d1 d2 time =  "  " ++ n ++ t ++"\n" ++
+                             w ++  "★ "  ++ e ++ "\n" ++
+                            "  " ++ s ++ "  " where
+  w = getArr E (d1, d2)
+  e = getArr W (d1, d2)
+  s = getArr N (d1, d2)
+  n = getArr S (d1, d2)
+  t = printf "%2d" time
+
+getArr :: Dir -> (Dir, Dir) -> String
+getArr d (d1, d2) = case getOtherDir d (d1, d2) of
+                      Just (da, db) -> getArr' (da, db) 
+                      Nothing -> "  "
+
+getOtherDir :: Dir -> (Dir, Dir) -> Maybe (Dir, Dir)
+getOtherDir d (d1, d2) | d == d1 = Just (d1, d2)
+getOtherDir d (d1, d2) | d == d2 = Just (d2, d1)
+getOtherDir _ _ = Nothing
+  
+
+getArr' :: (Dir, Dir) -> String
+getArr' (N, E) = "↱ "
+getArr' (N, S) = "↱ "
+getArr' (N, W) = "↰ "
+getArr' (S, E) = "↳ "
+getArr' (S, W) = "↲ "
+getArr' (S, N) = "↲ "
+getArr' (E, N) = "⬏ "
+getArr' (E, S) = "⬎ "
+getArr' (E, W) = "⬎ "
+getArr' (W, N) = "⬑ "
+getArr' (W, E) = "⬑ "
+getArr' (W, S) = "⬐ "
+getArr' (_, _) = "  "
 
 -- * Events
 
