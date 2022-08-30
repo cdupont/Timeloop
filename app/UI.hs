@@ -92,18 +92,11 @@ drawItem' (Item ExitPortal t d) _ = str $ tilePortal False d t
 drawItem' (Item Walker t d) st  = dimAttr st t $ str $ tileWalker d t where
   dimAttr st t = if (st `mod` 6) /= t then withAttr dim else id
 
-emptyCell = undefined
-
-tileEmpty :: String 
-tileEmpty =  "      \n" ++
-             "      \n" ++ 
-             "      " 
-
-
 tilePortal :: Bool -> Dir -> Time -> String
-tilePortal in_ dir time =  "┌─" ++ n ++ "─┐\n" ++
-                            w ++   c  ++ e ++ "\n" ++
-                           "└─" ++ s ++ "─┘" where
+tilePortal in_ dir time =  
+  "┌─" ++ n ++ "─┐\n" ++
+   w ++   c  ++ e ++ "\n" ++
+  "└─" ++ s ++ "─┘" where
   w = if dir == W then showE dir else "│ " 
   e = if dir == E then showE dir else " │" 
   n = if dir == N then showE dir else "──" 
@@ -113,21 +106,28 @@ tilePortal in_ dir time =  "┌─" ++ n ++ "─┐\n" ++
 
 
 tileWalker :: Dir -> Time -> String
-tileWalker dir time = "    " ++ t ++ "\n" ++
-                      "  " ++ c ++ "  \n" ++
-                      "      \n" where
+tileWalker dir time = 
+  "    " ++ t ++ "\n" ++
+  "  " ++ c ++ "  \n" ++
+  "      \n" where
   c = show dir 
   t = printf "%2d" time
 
 tileCollision :: Dir -> Dir -> Time -> String
-tileCollision d1 d2 time =  "  " ++ n ++ t ++"\n" ++
-                             w ++  "★ "  ++ e ++ "\n" ++
-                            "  " ++ s ++ "  " where
+tileCollision d1 d2 time =
+  "  " ++ n ++ t ++"\n" ++
+   w ++  "★ "  ++ e ++ "\n" ++
+  "  " ++ s ++ "  " where
   w = getArr E (d1, d2)
   e = getArr W (d1, d2)
   s = getArr N (d1, d2)
   n = getArr S (d1, d2)
   t = printf "%2d" time
+
+tileEmpty :: String 
+tileEmpty =  "      \n" ++
+             "      \n" ++ 
+             "      " 
 
 getArr :: Dir -> (Dir, Dir) -> String
 getArr d (d1, d2) = case getOtherDir d (d1, d2) of

@@ -81,7 +81,7 @@ getTimeline ps emitters consumers = map getIOT [0..10] where
 
 -- generate the full universe of walkers from a timeline.
 getAllWalkers :: [([Exit], [Entry])] -> [[Walker]]
-getAllWalkers timeline = scanl getNextStep [] timeline
+getAllWalkers timeline = zipWith (<>) (map fst timeline) (scanl getNextStep [] timeline)
 
 -- Move the walkers one step. Some new walkers can appear (from exits).
 -- some walkers can disappear (in entries).
@@ -94,14 +94,11 @@ getAllSTBlocks u@(Univ _ es cs) = map (\ps -> STBlock u (join $ getAllWalkers $ 
 
 
 -- A Universe is valid when a walker that enters a portal, also exits it. 
-isValidUniv :: [Walker] -> [Portal] -> Bool
-isValidUniv = undefined
+isValidUniv :: STBlock -> Bool
+isValidUniv (STBlock (Univ ps _ _) ws) = and $ map (isValidPortal ws) ps where
+  isValidPortal ws (Portal c e) = (c `elem` ws) == (e `elem` ws)
 
--- A Portal is valid if, when a walker enters a portal, it also exits it. 
-isValidPortal :: [Walker] -> Portal -> Bool
-isValidPortal = undefined
-
---Move walkers **at the same position**
+--Move walkers **at the same position*
 move :: [Walker] -> [Walker]
 move (w:[]) = [simpleMove w]
 move (w1:w2:[]) = [simpleMove $ turn Right_ w1, 
@@ -148,6 +145,18 @@ turn' Front a  = a
 univ1 :: Univ
 univ1 = Univ
   [Portal (PTD (Pos 1 (-1)) 2 S) (PTD (Pos 2 0) 0 W)]
+  [PTD (Pos 0 0) 0 E]
+  []
+
+univ2 :: Univ
+univ2 = Univ
+  [Portal (PTD (Pos 2 0) 2 E) (PTD (Pos 1 (-1)) 0 N)]
+  [PTD (Pos 0 0) 0 E]
+  []
+
+univ3 :: Univ
+univ3 = Univ
+  [Portal (PTD (Pos 2 0) 2 E) (PTD (Pos 1 1) 0 S)]
   [PTD (Pos 0 0) 0 E]
   []
 
