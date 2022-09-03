@@ -1,118 +1,78 @@
-cabal-version: 1.12
-
--- This file has been generated from package.yaml by hpack version 0.34.4.
---
--- see: https://github.com/sol/hpack
-
 name:           timetravel
 version:        0.1.0.0
 description:    Please see the README on GitHub at <https://github.com/githubuser/timetravel#readme>
-homepage:       https://github.com/githubuser/timetravel#readme
-bug-reports:    https://github.com/githubuser/timetravel/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2021 Author name here
+homepage:       https://github.com/cdupont/timetravel#readme
+bug-reports:    https://github.com/cdupont/timetravel/issues
+author:         Corentin Dupont
+maintainer:     corentin.dupont@gmail.com
+copyright:      2021 Corentin Dupont
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
+cabal-version:  >= 1.10
+
 extra-source-files:
-    README.md
     ChangeLog.md
+    README.md
 
 source-repository head
   type: git
-  location: https://github.com/githubuser/timetravel
+  location: https://github.com/cdupont/timetravel
 
 library
-  exposed-modules:
-      Lib
-  other-modules:
-      Paths_timetravel
   hs-source-dirs:
       src
   build-depends:
-      base >=4.7 && <5
-    , bytestring
-    , colour
-    , containers
-    , diagrams
-    , diagrams-core
-    , diagrams-lib
-    , diagrams-svg
-    , extra
-    , fgl
-    , linear
+      base >= 4.9
     , optparse-simple
-    , palette
-    , reanimate
-    , reanimate-svg
-    , string-conversions
-    , svg-builder
-    , text
-    , utility-ht
+    , brick >= 1.0
+    , weighted-search
+    , split
+    , vty
+    , containers
+    , optics
+    , optics-th
+  exposed-modules:
+      TimeLoop.Search
+      TimeLoop.Types
+      TimeLoop.Walker
+  other-modules:
+      Paths_timetravel
   default-language: Haskell2010
 
 executable timetravel-exe
   main-is: Main.hs
-  other-modules:
-      Anim
-      Diag
-      Reanimate.Diagrams
-      Tree
-      Paths_timetravel
   hs-source-dirs:
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
-    , bytestring
-    , colour
-    , containers
-    , diagrams
-    , diagrams-core
-    , diagrams-lib
-    , diagrams-svg
-    , extra
-    , fgl
-    , linear
+      base >= 4.9
     , optparse-simple
-    , palette
-    , reanimate
-    , reanimate-svg
-    , string-conversions
-    , svg-builder
-    , text
+    , brick >= 1.0
+    , weighted-search
+    , split
+    , vty
+    , containers
+    , optics
     , timetravel
-    , utility-ht
+  other-modules:
+      UI
   default-language: Haskell2010
 
 test-suite timetravel-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
-  other-modules:
-      Paths_timetravel
   hs-source-dirs:
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
-    , bytestring
-    , colour
-    , containers
-    , diagrams
-    , diagrams-core
-    , diagrams-lib
-    , diagrams-svg
-    , extra
-    , fgl
-    , linear
+      base == 4.16
     , optparse-simple
-    , palette
-    , reanimate
-    , reanimate-svg
-    , string-conversions
-    , svg-builder
-    , text
+    , brick >= 1.0
+    , weighted-search
+    , split
+    , vty
+    , containers
+    , optics
     , timetravel
-    , utility-ht
   default-language: Haskell2010
