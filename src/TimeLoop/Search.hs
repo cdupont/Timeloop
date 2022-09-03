@@ -29,7 +29,7 @@ getPortalCombinations (Univ ps _ _) = subsequences ps
 
 -- Get a list of exits and entrys, indexed by their time.
 getTimeline :: [Portal] -> [Exit] -> [Entry] -> [([Exit], [Entry])]
-getTimeline ps emitters consumers = map getIOT [0..10] where
+getTimeline ps emitters consumers = map getIOT [0..maxStep] where
   getIOT t = ((emitters  ++ (map exit ps))  `at_t` t, 
               (consumers ++ (map entry ps)) `at_t` t) where
   at_t ptds t = filter (\(PTD _ t' _) -> t == t') ptds

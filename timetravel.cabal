@@ -57,6 +57,7 @@ executable timetravel-exe
     , timetravel
   other-modules:
       UI
+      Tile
   default-language: Haskell2010
 
 test-suite timetravel-test

@@ -22,6 +22,7 @@ import Text.Printf
 import Optics
 import Optics.Label
 import GHC.Generics (Generic)
+import Tile
 
 data ItemType = EntryPortal | ExitPortal | Entry | Exit | Walker
   deriving (Eq, Ord, Show)
@@ -71,18 +72,19 @@ drawUI (UI u sel st)= [(center $ border $ drawConfigPanel u sel)
 
 -- Display the top panel for configuring the universe.
 drawConfigPanel :: Univ -> SelItem -> Widget ()
-drawConfigPanel u sel = drawItemMap (getItemsUniv u) lims (Just sel) 0
+drawConfigPanel u sel = drawItemMap (getItemsUniv u) lims (Just sel) Nothing 
 
 -- Display the various solutions
 drawSearchPanel :: Univ -> Step -> Widget ()
 drawSearchPanel u st = hBox $ map drawBlock $ getValidSTBlocks u where
-  drawBlock block = border $ drawItemMap (getItemMap block) lims Nothing st
+  drawBlock block = border $ drawItemMap (getItemMap block) lims Nothing (Just st)
 
--- Get the various items in a block as a Map
+-- Get the various items in a Block as a Map
 getItemMap :: STBlock -> ItemMap
 getItemMap (STBlock u ws) = M.unionWith (++) (getItemsUniv u) walkers where
   walkers = M.fromListWith (++) $ map (\(PTD p t d) -> (p, [Item Walker t d])) ws 
 
+-- Get the various items in Univ 
 getItemsUniv :: Univ -> ItemMap
 getItemsUniv (Univ ps es cs) = M.fromListWith (++) (entries ++ exits ++ portalEntries ++ portalExits) where
   entries       = map (\(PTD p t d)            -> (p, [Item Entry t d])) es
@@ -91,95 +93,43 @@ getItemsUniv (Univ ps es cs) = M.fromListWith (++) (entries ++ exits ++ portalEn
   portalExits   = map (\(Portal _ (PTD p t d)) -> (p, [Item ExitPortal t d])) ps
 
 -- Draws items
-drawItemMap :: ItemMap -> Limits -> Maybe SelItem -> Step ->  Widget ()
+drawItemMap :: ItemMap -> Limits -> Maybe SelItem -> Maybe Step ->  Widget ()
 drawItemMap is ((minX, minY), (maxX, maxY)) sel st = vBox $ map row [maxY, maxY-1 .. minY] where
   row y = hBox $ map (\x -> drawItems (Pos x y) is sel st) [minX..maxX]
 
 -- Draw items at a specific position
-drawItems :: Pos -> ItemMap -> Maybe SelItem -> Step -> Widget ()
+drawItems :: Pos -> ItemMap -> Maybe SelItem -> Maybe Step -> Widget ()
 drawItems p is sel st = case M.lookup p is of
-  Just items -> drawItem items (getItemType sel) st
-  Nothing    -> drawItem [] Nothing 0 
+  Just items -> drawTile items (getItemType sel) st
+  Nothing    -> drawTile [] Nothing Nothing 
  where
    getItemType (Just (SelItem it _)) = Just it
    getItemType Nothing = Nothing
 
-drawItem :: [Item] -> Maybe ItemType -> Step -> Widget ()
-drawItem is sel st = drawItem' (sort is) st where
+-- draw a single tile
+-- Items are sorted by priority: EntryPortal, ExitPortal, Entry, Exit, Walker 
+-- Items with the same time than the current step get better priority
+-- Only the first will be displayed
+drawTile :: [Item] -> Maybe ItemType -> Maybe Step -> Widget ()
+drawTile is sel st = drawTile' (sortBy (timePrio st) is) st where
+  timePrio (Just st) (Item _ t1 _) (Item _ t2 _) | (t1 == st `mod` maxStep) = LT 
+  timePrio (Just st) (Item _ t1 _) (Item _ t2 _) | (t2 == st `mod` maxStep) = GT 
+  timePrio _ a b = compare a b
   --selectAttr = if (Just it) == sel then withAttr red else id
 
-drawItem' :: [Item] -> Step -> Widget ()
-drawItem' [] _ = str tileEmpty 
-drawItem' ((Item EntryPortal t d) : _) _ = str $ tilePortal True d t 
-drawItem' ((Item ExitPortal t d) : _) _  = str $ tilePortal False d t 
-drawItem' ((Item Entry t d) : _) st      = str $ tileWalker d t
-drawItem' ((Item Exit t d) : _) st       = str $ tileWalker d t
-drawItem' ((Item Walker t1 d1) : (Item Walker t2 d2) : _) st     = str $ tileCollision d1 d2 t1 where
-drawItem' ((Item Walker t d) : _) st     = str $ tileWalker d t
---  dimAttr st t = if (st `mod` 6) /= t then withAttr dim else id
+drawTile' :: [Item] -> Maybe Step -> Widget ()
+drawTile' [] _                                                          = str tileEmpty 
+drawTile' ((Item EntryPortal t d) : _) st                               = dimAttr st t $ str $ tilePortal True d t 
+drawTile' ((Item ExitPortal t d) : _) st                                = dimAttr st t $ str $ tilePortal False d t 
+drawTile' ((Item Entry t d) : _) st                                     = dimAttr st t $ str $ tileWalker d t
+drawTile' ((Item Exit t d) : _) st                                      = dimAttr st t $ str $ tileWalker d t
+drawTile' ((Item Walker t1 d1) : (Item Walker t2 d2) : _) st | t1 == t2 = dimAttr st t1 $ str $ tileCollision d1 d2 t1
+drawTile' ((Item Walker t d) : _) st                                    = dimAttr st t $ str $ tileWalker d t
 
-tilePortal :: Bool -> Dir -> Time -> String
-tilePortal in_ dir time =  
-  "┌─" ++ n ++ "─┐\n" ++
-   w ++   c  ++ e ++ "\n" ++
-  "└─" ++ s ++ "─┘" where
-  w = if side == W then show dir else "│ " 
-  e = if side == E then show dir else " │" 
-  n = if side == N then show dir else "──" 
-  s = if side == S then show dir else "──" 
-  c = printf "%2d" time
-  side = if in_ then turn' Back dir else dir 
+dimAttr :: Maybe Step -> Time -> Widget () -> Widget ()
+dimAttr (Just st') t = if (st' `mod` maxStep) /= t then withAttr dim else id
+dimAttr Nothing t = id 
 
-
-tileWalker :: Dir -> Time -> String
-tileWalker dir time = 
-  "    " ++ t ++ "\n" ++
-  "  " ++ c ++ "  \n" ++
-  "      \n" where
-  c = show dir 
-  t = printf "%2d" time
-
-tileCollision :: Dir -> Dir -> Time -> String
-tileCollision d1 d2 time =
-  "  " ++ n ++ t ++"\n" ++
-   w ++  "★ "  ++ e ++ "\n" ++
-  "  " ++ s ++ "  " where
-  w = getArr E (d1, d2)
-  e = getArr W (d1, d2)
-  s = getArr N (d1, d2)
-  n = getArr S (d1, d2)
-  t = printf "%2d" time
-
-tileEmpty :: String 
-tileEmpty =  "      \n" ++
-             "      \n" ++ 
-             "      " 
-
-getArr :: Dir -> (Dir, Dir) -> String
-getArr d (d1, d2) = case getOtherDir d (d1, d2) of
-                      Just (da, db) -> getArr' (da, db) 
-                      Nothing -> "  "
-
-getOtherDir :: Dir -> (Dir, Dir) -> Maybe (Dir, Dir)
-getOtherDir d (d1, d2) | d == d1 = Just (d1, d2)
-getOtherDir d (d1, d2) | d == d2 = Just (d2, d1)
-getOtherDir _ _ = Nothing
-  
-
-getArr' :: (Dir, Dir) -> String
-getArr' (N, E) = "↱ "
-getArr' (N, S) = "↱ "
-getArr' (N, W) = "↰ "
-getArr' (S, E) = "↳ "
-getArr' (S, W) = "↲ "
-getArr' (S, N) = "↲ "
-getArr' (E, N) = "⬏ "
-getArr' (E, S) = "⬎ "
-getArr' (E, W) = "⬎ "
-getArr' (W, N) = "⬑ "
-getArr' (W, E) = "⬑ "
-getArr' (W, S) = "⬐ "
-getArr' (_, _) = "  "
 
 -- * Events
 

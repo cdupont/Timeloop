@@ -65,6 +65,8 @@ data STBlock = STBlock {
 
 type Limits = ((Int, Int), (Int, Int))
 
+maxStep :: Int
+maxStep = 10
 
 --  sample data *
 
