@@ -10,13 +10,7 @@ import GHC.Generics (Generic)
 import Optics.Label
 
 data Dir = N | S | E | W 
-   deriving (Eq, Ord, Read)
-
-instance Show Dir where
-  show N = "↑ "
-  show W = "← "
-  show E = "→ "
-  show S = "↓ "
+   deriving (Eq, Ord, Show)
 
 data RelDir = Front | Back | Right_ | Left_
   deriving (Eq, Ord, Show)

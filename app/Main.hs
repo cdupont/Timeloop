@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE TypeFamilies              #-}
@@ -31,7 +30,7 @@ main = do
     writeBChan chan Tick
     threadDelay 1000000
   putStrLn "Loading"
-  let initState = UI univ1 (SelItem EntryPortal 1) 0
+  let initState = UI univ1 (SelItem EntryPortal 0) 0
   let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
   customMain initialVty buildVty (Just chan) app initState
@@ -39,17 +38,11 @@ main = do
   putStrLn "Goodbye"
 
 
-
-
 options :: Parser (String, String)
 options = do
   i <- (strOption (short 'i') :: Parser String) 
   o <- (strOption (short 'o') :: Parser String)
   return (i, o)
-
-readPos :: String -> PTD
-readPos s = PTD (Pos (read x) (read y)) (read t) (read d) where
- (x:y:t:d:_) = words s
 
 
    
