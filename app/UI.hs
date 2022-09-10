@@ -23,7 +23,7 @@ import Optics
 import Optics.Label
 import GHC.Generics (Generic)
 import Tile
-import TimeLoop.Types (Univ(emitters))
+import TimeLoop.Types (Univ(emitters, consumers))
 
 data ItemType = EntryPortal | ExitPortal | Entry | Exit | Walker
   deriving (Eq, Ord, Show)
@@ -33,7 +33,8 @@ data Item = Item {
   time :: Time,
   dir :: Dir,
   sel :: Maybe Bool,
-  high :: Maybe Bool}
+  high :: Maybe Bool,
+  col  :: Maybe Int}
   deriving (Eq, Ord, Show)
 
 type ItemMap = M.Map Pos [Item]
@@ -63,7 +64,7 @@ app = App
   , appChooseCursor = neverShowCursor
   , appHandleEvent  = handleEvent
   , appStartEvent   = return ()
-  , appAttrMap      = const theMap
+  , appAttrMap      = theMap
   }
 
 lims :: Limits
@@ -83,29 +84,31 @@ drawConfigPanel u sel = drawItemMap (getItemsUniv u (Just sel) Nothing) lims
 
 -- Display the various solutions
 drawSearchPanel :: Univ -> Step -> Widget ()
-drawSearchPanel u st = hBox $ map drawBlock $ getValidSTBlocks u where
+drawSearchPanel u st = hBox $ map drawBlock $ getAllSTBlocks u where
   drawBlock block = border $ drawItemMap (getItemMap block Nothing (Just st)) lims
 
 -- Get the various items in a Block as a Map
 getItemMap :: STBlock -> Maybe SelItem -> Maybe Step -> ItemMap
 getItemMap (STBlock u ws) sel st = M.map (sortBy $ timePrio st) $ M.unionWith (++) (getItemsUniv u sel st) walkers where
-  walkers = M.fromListWith (++) $ map (\(PTD p t d) -> (p, [Item Walker t d Nothing (highlighted t st)])) ws 
+  walkers = M.fromListWith (++) $ map (\(PTD p t d) -> (p, [Item Walker t d Nothing (highlighted t st) Nothing])) ws 
 
 -- Get the various items in Univ 
 getItemsUniv :: Univ -> Maybe SelItem -> Maybe Step -> ItemMap
 getItemsUniv (Univ ps es cs) sel st = M.fromListWith (++) (entries ++ exits ++ portalEntries ++ portalExits) where
-  entries       = map (\(PTD p t d)            -> (p, [Item Entry       t d (selected sel Entry)       (highlighted t st)])) es
-  exits         = map (\(PTD p t d)            -> (p, [Item Exit        t d (selected sel Exit)        (highlighted t st)])) cs
-  portalEntries = map (\(Portal (PTD p t d) _) -> (p, [Item EntryPortal t d (selected sel EntryPortal) (highlighted t st)])) ps
-  portalExits   = map (\(Portal _ (PTD p t d)) -> (p, [Item ExitPortal  t d (selected sel ExitPortal)  (highlighted t st)])) ps
+  entries       = zipWith (\(PTD p t d) i           -> (p, [Item Entry       t d (selected sel Entry i)       (highlighted t st) Nothing])) es [0..]
+  exits         = zipWith (\(PTD p t d) i           -> (p, [Item Exit        t d (selected sel Exit i)        (highlighted t st) Nothing])) cs [0..]
+  portalEntries = zipWith (\(Portal (PTD p t d) _) i -> (p, [Item EntryPortal t d (selected sel EntryPortal i) (highlighted t st) (Just i)])) ps [0..]
+  portalExits   = zipWith (\(Portal _ (PTD p t d)) i -> (p, [Item ExitPortal  t d (selected sel ExitPortal i)  (highlighted t st) (Just i)])) ps [0..]
 
 highlighted t (Just st') = Just $ (st' `mod` maxStep) == t
 highlighted _ _ = Nothing 
-selected (Just (SelItem it index)) it' = Just $ it == it'
-selected _ _ = Nothing 
+
+selected :: Maybe SelItem -> ItemType -> Int -> Maybe Bool
+selected (Just (SelItem it index)) it' index' = Just ( it == it' && index == index')
+selected _ _ _ = Nothing 
   
-timePrio (Just st) (Item _ t1 _ _ _) _ | t1 == st `mod` maxStep = LT 
-timePrio (Just st) _ (Item _ t2 _ _ _) | t2 == st `mod` maxStep = GT 
+timePrio (Just st) (Item _ t1 _ _ _ _) _ | t1 == st `mod` maxStep = LT 
+timePrio (Just st) _ (Item _ t2 _ _ _ _) | t2 == st `mod` maxStep = GT 
 timePrio _ a b = compare a b
 
 -- Draws items
@@ -124,20 +127,22 @@ drawItems p is = case M.lookup p is of
 -- Items with the same time than the current step get better priority
 -- Only the first will be displayed
 drawTile :: [Item] -> Widget ()
-drawTile []                                                                      = str tileEmpty 
-drawTile ((Item EntryPortal t d sel high) : _)                                   = selectAttr sel $ dimAttr high $ str $ tilePortal True d t 
-drawTile ((Item ExitPortal t d sel high) : _)                                    = selectAttr sel $ dimAttr high $ str $ tilePortal False d t 
-drawTile ((Item Entry t d sel high) : _)                                         = selectAttr sel $ dimAttr high $ str $ tileEntry d t
-drawTile ((Item Exit t d sel high) : _)                                          = selectAttr sel $ dimAttr high $ str $ tileExit d t
-drawTile ((Item Walker t1 d1 sel high) : (Item Walker t2 d2 _ _) : _) | t1 == t2 = selectAttr sel $ dimAttr high $ str $ tileCollision d1 d2 t1
-drawTile ((Item Walker t d sel high) : _)                                        = selectAttr sel $ dimAttr high $ str $ tileWalker d t
+drawTile []                                                                             = str tileEmpty 
+drawTile ((Item EntryPortal t d sel high pair) : _)                                     = setAttr sel high pair $ str $ tilePortal True d t 
+drawTile ((Item ExitPortal t d sel high pair) : _)                                      = setAttr sel high pair $ str $ tilePortal False d t 
+drawTile ((Item Entry t d sel high pair) : _)                                           = setAttr sel high pair $ str $ tileEntry d t
+drawTile ((Item Exit t d sel high pair) : _)                                            = setAttr sel high pair $ str $ tileExit d t
+drawTile ((Item Walker t1 d1 sel high pair) : (Item Walker t2 d2 _ _ _) : _) | t1 == t2 = setAttr sel high pair $ str $ tileCollision d1 d2 t1
+drawTile ((Item Walker t d sel high pair) : _)                                          = setAttr sel high pair $ str $ tileWalker d t
 
-dimAttr, selectAttr :: Maybe Bool -> Widget () -> Widget ()
-dimAttr (Just False) = withAttr dimA
-dimAttr _ = id 
-selectAttr (Just True) = withAttr selA 
-selectAttr _ = id
-
+setAttr :: Maybe Bool -> Maybe Bool -> Maybe Int -> Widget () -> Widget () 
+setAttr sel high pair = withDefAttr (pairAttr pair) . withDefAttr (selectAttr sel) . withDefAttr (dimAttr high) where
+  dimAttr (Just False) = dimA
+  dimAttr _ = mempty
+  selectAttr (Just True) = selA 
+  selectAttr _ = mempty
+  pairAttr (Just n) = portalA n
+  pairAttr _ = mempty
 
 -- * Events
 
@@ -151,7 +156,9 @@ handleEvent (VtyEvent (V.EvKey V.KDown       [])) = modify $ move' S
 handleEvent (VtyEvent (V.EvKey (V.KChar 'r') [])) = modify rotate 
 handleEvent (VtyEvent (V.EvKey (V.KChar '+') [])) = modify $ changeTime True 
 handleEvent (VtyEvent (V.EvKey (V.KChar '-') [])) = modify $ changeTime False
-handleEvent (VtyEvent (V.EvKey (V.KChar ' ') [])) = modify changePortal
+handleEvent (VtyEvent (V.EvKey (V.KChar ' ') [])) = modify changeItem
+handleEvent (VtyEvent (V.EvKey (V.KChar 'n') [])) = modify addItem
+handleEvent (VtyEvent (V.EvKey (V.KChar 'd') [])) = modify delItem 
 handleEvent (AppEvent Tick                      ) = modify increaseStep
 handleEvent _ = return ()
 
@@ -175,14 +182,38 @@ changeTime' :: Bool -> PTD -> PTD
 changeTime' True  (PTD p t d) = PTD p (t+1) d
 changeTime' False (PTD p t d) = PTD p (t-1) d
 
-changePortal :: UI -> UI
-changePortal ui@(UI u s _) = ui {selItem = dropWhile (/=s) (getSels u ++ [head $ getSels u]) !! 1}
+changeItem :: UI -> UI
+changeItem ui@(UI u s _) = ui {selItem = sel} where 
+  sel = case dropWhile (/=s) (getSels u) of
+          [] -> head $ getSels u
+          [s1] -> head $ getSels u
+          s1:s2:_ -> s2
+  
 
 getSels :: Univ -> [SelItem]
 getSels (Univ ps es cs) = portals ++ entries ++ exits where
   portals = concatMap (\i -> [SelItem EntryPortal i, SelItem ExitPortal i]) [0..length ps-1]
   entries = map (SelItem Entry) [0..length es-1]
   exits = map (SelItem Exit) [0..length cs-1]
+
+addItem :: UI -> UI
+addItem = changeItem . addItem'
+
+addItem' :: UI -> UI
+addItem' =  over (#initUniv % #portals) (++ [portal1]) 
+
+delItem :: UI -> UI
+delItem = changeItem . delItem'
+
+delItem' :: UI -> UI
+delItem' ui@(UI _ (SelItem EntryPortal i) _) =  over (#initUniv % #portals) (deleteAt i) ui 
+delItem' ui@(UI _ (SelItem ExitPortal i) _) =  over (#initUniv % #portals) (deleteAt i) ui 
+delItem' ui@(UI _ (SelItem Entry i) _) =  over (#initUniv % #emitters) (deleteAt i) ui 
+delItem' ui@(UI _ (SelItem Exit i) _) =  over (#initUniv % #consumers) (deleteAt i) ui 
+delItem' ui = ui
+
+deleteAt i xs = ls ++ rs
+  where (ls, _:rs) = splitAt i xs
 
 updateUI :: (PTD -> PTD) -> UI -> UI
 updateUI f ui@(UI _ (SelItem EntryPortal i) _) = over (#initUniv % #portals % ix i % #entry) f ui
@@ -200,11 +231,16 @@ increaseStep (UI ps s st)  = UI ps s (st+1)
 dimA, selA :: AttrName
 dimA   = attrName "Dim"
 selA   = attrName "Sel"
+portalA n = attrName $ "Portal" ++ (show n)
 
-theMap :: AttrMap
-theMap = attrMap
-  V.defAttr
-  [(dimA, VA.withStyle VA.defAttr VA.dim),
-   (selA, VA.withForeColor VA.defAttr VA.yellow)
-  ]
+portalColors :: [VA.Color]
+portalColors = [VA.yellow, VA.blue, VA.green]
+
+
+theMap :: UI -> AttrMap
+theMap (UI _ _ st) = attrMap
+  V.defAttr $
+    [(dimA, VA.withStyle VA.defAttr VA.dim),
+     (selA, if even st then VA.withStyle VA.defAttr VA.bold else VA.defAttr)] 
+   ++[ (portalA n, fg (portalColors !! n)) | n <- [0.. (length portalColors)-1]] 
 

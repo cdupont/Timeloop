@@ -6,7 +6,6 @@ import Prelude hiding (Left, Right)
 import Data.List
 import Data.Ord
 import Data.Maybe (listToMaybe, catMaybes)
-import Control.Monad ((>>), guard, join)
 import Control.Applicative
 import Control.Monad
 import TimeLoop.Types
@@ -42,7 +41,7 @@ getAllWalkers timeline = zipWith (++) (map fst timeline) (scanl getNextStep [] t
 -- some walkers can disappear (in entries).
 getNextStep :: [Walker] -> ([Exit], [Entry]) -> [Walker]
 getNextStep ws (exits, entries) = (concatMap move $ posGroups ((ws ++ exits) \\ entries)) where
-  posGroups as = groupBy (\(PTD p1 _ _) (PTD p2 _ _) -> p1 == p2) as
+  posGroups as = groupBy (\(PTD p1 t1 _) (PTD p2 t2 _) -> p1 == p2 && t1 == t2) as
 
 -- A Universe is valid when a walker that enters a portal, also exits it. 
 isValidBlock :: STBlock -> Bool
@@ -50,29 +49,6 @@ isValidBlock (STBlock (Univ ps _ _) ws) = and $ map (isValidPortal ws) ps where
   isValidPortal ws (Portal c e) = (c `elem` ws) == (e `elem` ws)
 
 
--- * Sample data
-
---Entrance portal below, exit in front
---two solutions: going straight or goign through portal
-univ1 :: Univ
-univ1 = Univ
-  [Portal (PTD (Pos 3 (-3)) 6 S) (PTD (Pos 6 0) 0 W)]
-  [PTD (Pos 0 0) 0 E]
-  []
-
---One solution: going through portal (self-rightning solution)
-univ2 :: Univ
-univ2 = Univ
-  [Portal (PTD (Pos 2 0) 2 E) (PTD (Pos 1 (-1)) 0 N)]
-  [PTD (Pos 0 0) 0 E]
-  []
-
---No solution (self deviating)
-univ3 :: Univ
-univ3 = Univ
-  [Portal (PTD (Pos 2 0) 2 E) (PTD (Pos 1 1) 0 S)]
-  [PTD (Pos 0 0) 0 E]
-  []
 
 showWalkers :: [Walker] -> String
 showWalkers ws = intercalate ";  " (map show ws)

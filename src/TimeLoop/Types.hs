@@ -9,11 +9,11 @@ module TimeLoop.Types where
 import GHC.Generics (Generic)
 import Optics.Label
 
-data Dir = N | S | E | W 
-   deriving (Eq, Ord, Show)
+data Dir = N | E | S | W 
+   deriving (Eq, Ord, Show, Enum, Bounded)
 
 data RelDir = Front | Back | Right_ | Left_
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Enum, Bounded)
 
 type Time = Int
 
@@ -67,4 +67,27 @@ maxStep = 10
 initPos :: PTD
 initPos = PTD (Pos 0 0) 0 E
 
+portal1 :: Portal
+portal1 = Portal (PTD (Pos 0 0) 0 S) (PTD (Pos 1 0) 1 W)
 
+--Entrance portal below, exit in front
+--two solutions: going straight or goign through portal
+univ1 :: Univ
+univ1 = Univ
+  [Portal (PTD (Pos 3 (-3)) 6 S) (PTD (Pos 6 0) 0 W)]
+  [PTD (Pos 0 0) 0 E]
+  []
+
+--One solution: going through portal (self-rightning solution)
+univ2 :: Univ
+univ2 = Univ
+  [Portal (PTD (Pos 2 0) 2 E) (PTD (Pos 1 (-1)) 0 N)]
+  [PTD (Pos 0 0) 0 E]
+  []
+
+--No solution (self deviating)
+univ3 :: Univ
+univ3 = Univ
+  [Portal (PTD (Pos 2 0) 2 E) (PTD (Pos 1 1) 0 S)]
+  [PTD (Pos 0 0) 0 E]
+  []
