@@ -21,10 +21,12 @@ See this [series of blog posts](https://www.corentindupont.info/blog/posts/Cosmo
 Install
 =======
 
-
 run:
 ```
-stack install
+cabal install
 ```
-
+Launch:
+```
+timetravel
+```
 
