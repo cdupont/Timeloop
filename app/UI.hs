@@ -80,7 +80,8 @@ lims = ((-1, -3), (7, 3))
 
 -- Display the whole interface
 drawUI :: UI -> [Widget ()]
-drawUI (UI u sel st conf)= [center (drawConfigPanel u sel)
+drawUI (UI u sel st conf)= [center (drawConfigPanel u sel) <+> border (str help)
+                       <=> (str $ encouragement (showSols conf) (length $ getValidSTBlocks u))
                        <=> (if showSols conf then drawSearchPanel u st conf else emptyWidget)]
 
 -- Display the top panel for configuring the universe.
@@ -104,20 +105,23 @@ getItemMap (STBlock u ws) sel st = M.map (sortBy $ timePrio st) $ M.unionWith (+
 -- Get the various items in Univ 
 getItemsUniv :: Univ -> Maybe SelItem -> Maybe Step -> ItemMap
 getItemsUniv (Univ ps es cs) sel st = M.fromListWith (++) (entries ++ exits ++ portalEntries ++ portalExits) where
-  entries       = zipWith (\(PTD p t d) i           -> (p, [Item Entry       t d (selected sel Entry i)       (highlighted t st) Nothing])) es [0..]
-  exits         = zipWith (\(PTD p t d) i           -> (p, [Item Exit        t d (selected sel Exit i)        (highlighted t st) Nothing])) cs [0..]
+  entries       = zipWith (\(PTD p t d) i            -> (p, [Item Entry       t d (selected sel Entry i)       (highlighted t st) Nothing])) es [0..]
+  exits         = zipWith (\(PTD p t d) i            -> (p, [Item Exit        t d (selected sel Exit i)        (highlighted t st) Nothing])) cs [0..]
   portalEntries = zipWith (\(Portal (PTD p t d) _) i -> (p, [Item EntryPortal t d (selected sel EntryPortal i) (highlighted t st) (Just i)])) ps [0..]
   portalExits   = zipWith (\(Portal _ (PTD p t d)) i -> (p, [Item ExitPortal  t d (selected sel ExitPortal i)  (highlighted t st) (Just i)])) ps [0..]
 
-highlighted t (Just st') = Just $ (st' `mod` maxStep) == t
+-- Highlight items that on the current timestep
+highlighted t (Just st') = Just $ (st' `div` 10 `mod` maxStep) == t
 highlighted _ _ = Nothing 
 
+-- Items selected by the user
 selected :: Maybe SelItem -> ItemType -> Int -> Maybe Bool
 selected (Just (SelItem it index)) it' index' = Just ( it == it' && index == index')
 selected _ _ _ = Nothing 
-  
-timePrio (Just st) (Item _ t1 _ _ _ _) _ | t1 == st `mod` maxStep = LT 
-timePrio (Just st) _ (Item _ t2 _ _ _ _) | t2 == st `mod` maxStep = GT 
+
+-- Items that are on the current timestep will be displayed with higher priority.
+timePrio (Just st) (Item _ t1 _ _ _ _) _ | t1 == st `div` 10 `mod` maxStep = LT 
+timePrio (Just st) _ (Item _ t2 _ _ _ _) | t2 == st `div` 10 `mod` maxStep = GT 
 timePrio _ a b = compare a b
 
 -- Draws items
@@ -132,9 +136,7 @@ drawItems p is = case M.lookup p is of
   Nothing    -> drawTile [] 
 
 -- draw a single tile
--- Items are sorted by priority: EntryPortal, ExitPortal, Entry, Exit, Walker 
--- Items with the same time than the current step get better priority
--- Only the first will be displayed
+-- Only the first item in the list will be displayed (except for collisions)
 drawTile :: [Item] -> Widget ()
 drawTile []                                                                             = str tileEmpty 
 drawTile ((Item EntryPortal t d sel high pair) : _)                                     = setAttr sel high pair $ str $ tilePortal True d t 
@@ -168,7 +170,7 @@ handleEvent (VtyEvent (V.EvKey (V.KChar '-') [])) = modify $ changeTime False
 handleEvent (VtyEvent (V.EvKey (V.KChar ' ') [])) = modify changeItem
 handleEvent (VtyEvent (V.EvKey (V.KChar 'n') [])) = modify addItem
 handleEvent (VtyEvent (V.EvKey (V.KChar 'd') [])) = modify delItem 
-handleEvent (VtyEvent (V.EvKey (V.KChar 's') [])) = modify showSolutions 
+handleEvent (VtyEvent (V.EvKey V.KEnter      [])) = modify showSolutions 
 handleEvent (VtyEvent (V.EvKey (V.KChar 'w') [])) = modify showWrongTrajectories 
 handleEvent (AppEvent Tick                      ) = modify increaseStep
 handleEvent _ = return ()
@@ -237,17 +239,17 @@ increaseStep :: UI -> UI
 increaseStep (UI ps s st c)  = UI ps s (st+1) c
 
 showSolutions :: UI -> UI
-showSolutions ui = over (#config % #showSols) not ui 
+showSolutions = over (#config % #showSols) not 
 
 showWrongTrajectories :: UI -> UI
-showWrongTrajectories ui = over (#config % #showWrongTrajs) not ui 
+showWrongTrajectories = over (#config % #showWrongTrajs) not 
 
 -- * Attributes
 
 dimA, selA :: AttrName
 dimA   = attrName "Dim"
 selA   = attrName "Sel"
-portalA n = attrName $ "Portal" ++ (show n)
+portalA n = attrName $ "Portal" ++ show n
 borderGood = attrName "borderGood"
 borderBad = attrName "borderBad"
 
@@ -261,6 +263,20 @@ theMap (UI _ _ st _) = attrMap
     [(dimA, VA.withStyle VA.defAttr VA.dim),
      (borderGood, fg VA.green),
      (borderBad, fg VA.red),
-     (selA, if even st then VA.withStyle VA.defAttr VA.bold else VA.defAttr)] 
-   ++[ (portalA n, fg (portalColors !! n)) | n <- [0.. (length portalColors)-1]] 
+     (selA, if even (st `div` 5) then VA.withStyle VA.defAttr VA.bold else VA.defAttr)] 
+   ++[ (portalA n, fg (portalColors !! n)) | n <- [0.. length portalColors - 1]] 
 
+
+help :: String
+help = "Keyboard arrows: move selected item\n" ++
+       "\'r\': rotate\n" ++
+       "\'+/-\': increase/decrease time\n" ++
+       "Space: change selected item\n" ++
+       "Enter: Show/Hide solutions\n" ++
+       "\'a/d\': add/delete items"
+
+encouragement :: Bool -> Int -> String
+encouragement False _ = "Press Enter when you are ready."
+encouragement _ 0 = "No solutions! You've hit a paradox. Press \'w\' to see why."
+encouragement _ 1 = "There is only one possible trajectory."
+encouragement _ n = "There are " ++ show n ++ " possible trajectories."

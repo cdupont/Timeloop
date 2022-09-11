@@ -39,10 +39,10 @@ tileCollision d1 d2 time =
   "  " ++ n ++ t ++"\n" ++
    w ++  "★ "  ++ e ++ "\n" ++
   "  " ++ s ++ "  " where
-  w = getArr E (d1, d2)
-  e = getArr W (d1, d2)
-  s = getArr N (d1, d2)
-  n = getArr S (d1, d2)
+  w = getArrLoc E (d1, d2)
+  e = getArrLoc W (d1, d2)
+  s = getArrLoc N (d1, d2)
+  n = getArrLoc S (d1, d2)
   t = printf "%2d" time
 
 tileEmpty :: String 
@@ -68,30 +68,25 @@ showToBarArr W = "⇤ "
 showToBarArr E = "⇥ "
 showToBarArr S = "⤓ "
 
-getArr :: Dir -> (Dir, Dir) -> String
-getArr d (d1, d2) = case getOtherDir d (d1, d2) of
-                      Just (da, db) -> getArr' (da, db) 
-                      Nothing -> "  "
 
-getOtherDir :: Dir -> (Dir, Dir) -> Maybe (Dir, Dir)
-getOtherDir d (d1, d2) | d == d1 = Just (d1, d2)
-getOtherDir d (d1, d2) | d == d2 = Just (d2, d1)
-getOtherDir _ _ = Nothing
-  
+-- Get the collision arrow given your own direction 
+getArrLoc :: Dir -> (Dir, Dir) -> String
+getArrLoc d (d1, d2)  | d == d1 = getAngleArr (d, turn' Right_ d) 
+getArrLoc d (d1, d2)  | d == d2 = getAngleArr (d, turn' Right_ d) 
+getArrLoc _  _ = "  "
 
-getArr' :: (Dir, Dir) -> String
-getArr' (N, E) = "↱ "
-getArr' (N, S) = "↱ "
-getArr' (N, W) = "↰ "
-getArr' (S, E) = "↳ "
-getArr' (S, W) = "↲ "
-getArr' (S, N) = "↲ "
-getArr' (E, N) = "⬏ "
-getArr' (E, S) = "⬎ "
-getArr' (E, W) = "⬎ "
-getArr' (W, N) = "⬑ "
-getArr' (W, E) = "⬑ "
-getArr' (W, S) = "⬐ "
-getArr' (_, _) = "  "
-
+getAngleArr :: (Dir, Dir) -> String
+getAngleArr (N, E) = "↱ "
+getAngleArr (N, S) = "↱ "
+getAngleArr (N, W) = "↰ "
+getAngleArr (S, E) = "↳ "
+getAngleArr (S, W) = "↲ "
+getAngleArr (S, N) = "↲ "
+getAngleArr (E, N) = "⬏ "
+getAngleArr (E, S) = "⬎ "
+getAngleArr (E, W) = "⬎ "
+getAngleArr (W, N) = "⬑ "
+getAngleArr (W, E) = "⬑ "
+getAngleArr (W, S) = "⬐ "
+getAngleArr (_, _) = "  "
 

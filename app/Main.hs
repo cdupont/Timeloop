@@ -28,7 +28,7 @@ main = do
   chan <- newBChan 10
   void . forkIO $ forever $ do
     writeBChan chan Tick
-    threadDelay 1000000
+    threadDelay 100000
   putStrLn "Loading"
   let initState = UI univ1 (SelItem EntryPortal 0) 0 (Config False False)
   let buildVty = V.mkVty V.defaultConfig

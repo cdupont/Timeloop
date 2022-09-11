@@ -50,7 +50,3 @@ isValidBlock (STBlock (Univ ps _ _) ws) = and $ map (isValidPortal ws) ps where
 
 
 
-showWalkers :: [Walker] -> String
-showWalkers ws = intercalate ";  " (map show ws)
-
-
