@@ -23,7 +23,6 @@ import Optics
 import Optics.Label
 import GHC.Generics (Generic)
 import Tile
-import TimeLoop.Types (Univ(emitters, consumers))
 
 data ItemType = EntryPortal | ExitPortal | Entry | Exit | Walker
   deriving (Eq, Ord, Show)
@@ -49,7 +48,13 @@ type Step = Int
 data UI = UI {
   initUniv :: Univ,
   selItem  :: SelItem, -- Which item is selected
-  stepItem :: Step}   -- Which time step is highlighted
+  stepItem :: Step,
+  config   :: Config}   -- Which time step is highlighted
+  deriving (Generic)
+
+data Config = Config {
+  showSols :: Bool,
+  showWrongTrajs :: Bool}
   deriving (Generic)
 
 -- | Ticks mark passing of time
@@ -75,17 +80,21 @@ lims = ((-1, -3), (7, 3))
 
 -- Display the whole interface
 drawUI :: UI -> [Widget ()]
-drawUI (UI u sel st)= [center (border $ drawConfigPanel u sel)
-                       <=> drawSearchPanel u st]
+drawUI (UI u sel st conf)= [center (drawConfigPanel u sel)
+                       <=> (if showSols conf then drawSearchPanel u st conf else emptyWidget)]
 
 -- Display the top panel for configuring the universe.
 drawConfigPanel :: Univ -> SelItem -> Widget ()
-drawConfigPanel u sel = drawItemMap (getItemsUniv u (Just sel) Nothing) lims 
+drawConfigPanel u sel = borderWithLabel (str " Universe setup ") $ drawItemMap (getItemsUniv u (Just sel) Nothing) lims 
 
 -- Display the various solutions
-drawSearchPanel :: Univ -> Step -> Widget ()
-drawSearchPanel u st = hBox $ map drawBlock $ getAllSTBlocks u where
-  drawBlock block = border $ drawItemMap (getItemMap block Nothing (Just st)) lims
+drawSearchPanel :: Univ -> Step -> Config -> Widget ()
+drawSearchPanel u st conf = hBox $ goodBlocks ++ badBlocks where
+  goodBlocks = zipWith (\b i -> overrideAttr borderAttr borderGood $ drawBlock (" Solution n." ++ show i ++ " ") b) gbs [1..]
+  badBlocks = if showWrongTrajs conf then map (overrideAttr borderAttr borderBad . drawBlock "") bbs else [emptyWidget] 
+  drawBlock label block = borderWithLabel (str label) $ drawItemMap (getItemMap block Nothing (Just st)) lims
+  (gbs, bbs) = partition isValidBlock $ getAllSTBlocks u
+
 
 -- Get the various items in a Block as a Map
 getItemMap :: STBlock -> Maybe SelItem -> Maybe Step -> ItemMap
@@ -159,6 +168,8 @@ handleEvent (VtyEvent (V.EvKey (V.KChar '-') [])) = modify $ changeTime False
 handleEvent (VtyEvent (V.EvKey (V.KChar ' ') [])) = modify changeItem
 handleEvent (VtyEvent (V.EvKey (V.KChar 'n') [])) = modify addItem
 handleEvent (VtyEvent (V.EvKey (V.KChar 'd') [])) = modify delItem 
+handleEvent (VtyEvent (V.EvKey (V.KChar 's') [])) = modify showSolutions 
+handleEvent (VtyEvent (V.EvKey (V.KChar 'w') [])) = modify showWrongTrajectories 
 handleEvent (AppEvent Tick                      ) = modify increaseStep
 handleEvent _ = return ()
 
@@ -183,7 +194,7 @@ changeTime' True  (PTD p t d) = PTD p (t+1) d
 changeTime' False (PTD p t d) = PTD p (t-1) d
 
 changeItem :: UI -> UI
-changeItem ui@(UI u s _) = ui {selItem = sel} where 
+changeItem ui@(UI u s _ _) = ui {selItem = sel} where 
   sel = case dropWhile (/=s) (getSels u) of
           [] -> head $ getSels u
           [s1] -> head $ getSels u
@@ -206,25 +217,30 @@ delItem :: UI -> UI
 delItem = changeItem . delItem'
 
 delItem' :: UI -> UI
-delItem' ui@(UI _ (SelItem EntryPortal i) _) =  over (#initUniv % #portals) (deleteAt i) ui 
-delItem' ui@(UI _ (SelItem ExitPortal i) _) =  over (#initUniv % #portals) (deleteAt i) ui 
-delItem' ui@(UI _ (SelItem Entry i) _) =  over (#initUniv % #emitters) (deleteAt i) ui 
-delItem' ui@(UI _ (SelItem Exit i) _) =  over (#initUniv % #consumers) (deleteAt i) ui 
+delItem' ui@(UI _ (SelItem EntryPortal i) _ _) =  over (#initUniv % #portals) (deleteAt i) ui 
+delItem' ui@(UI _ (SelItem ExitPortal i) _ _) =  over (#initUniv % #portals) (deleteAt i) ui 
+delItem' ui@(UI _ (SelItem Entry i) _ _) =  over (#initUniv % #emitters) (deleteAt i) ui 
+delItem' ui@(UI _ (SelItem Exit i) _ _) =  over (#initUniv % #consumers) (deleteAt i) ui 
 delItem' ui = ui
 
 deleteAt i xs = ls ++ rs
   where (ls, _:rs) = splitAt i xs
 
 updateUI :: (PTD -> PTD) -> UI -> UI
-updateUI f ui@(UI _ (SelItem EntryPortal i) _) = over (#initUniv % #portals % ix i % #entry) f ui
-updateUI f ui@(UI _ (SelItem ExitPortal i) _)  = over (#initUniv % #portals % ix i % #exit)  f ui
-updateUI f ui@(UI _ (SelItem Entry i) _)       = over (#initUniv % #emitters % ix i) f ui
-updateUI f ui@(UI _ (SelItem Exit i) _)        = over (#initUniv % #consumers % ix i) f ui
+updateUI f ui@(UI _ (SelItem EntryPortal i) _ _) = over (#initUniv % #portals % ix i % #entry) f ui
+updateUI f ui@(UI _ (SelItem ExitPortal i) _ _)  = over (#initUniv % #portals % ix i % #exit)  f ui
+updateUI f ui@(UI _ (SelItem Entry i) _ _)       = over (#initUniv % #emitters % ix i) f ui
+updateUI f ui@(UI _ (SelItem Exit i) _ _)        = over (#initUniv % #consumers % ix i) f ui
 updateUI f ui = ui
 
 increaseStep :: UI -> UI
-increaseStep (UI ps s st)  = UI ps s (st+1)
+increaseStep (UI ps s st c)  = UI ps s (st+1) c
 
+showSolutions :: UI -> UI
+showSolutions ui = over (#config % #showSols) not ui 
+
+showWrongTrajectories :: UI -> UI
+showWrongTrajectories ui = over (#config % #showWrongTrajs) not ui 
 
 -- * Attributes
 
@@ -232,15 +248,19 @@ dimA, selA :: AttrName
 dimA   = attrName "Dim"
 selA   = attrName "Sel"
 portalA n = attrName $ "Portal" ++ (show n)
+borderGood = attrName "borderGood"
+borderBad = attrName "borderBad"
 
 portalColors :: [VA.Color]
 portalColors = [VA.yellow, VA.blue, VA.green]
 
 
 theMap :: UI -> AttrMap
-theMap (UI _ _ st) = attrMap
+theMap (UI _ _ st _) = attrMap
   V.defAttr $
     [(dimA, VA.withStyle VA.defAttr VA.dim),
+     (borderGood, fg VA.green),
+     (borderBad, fg VA.red),
      (selA, if even st then VA.withStyle VA.defAttr VA.bold else VA.defAttr)] 
    ++[ (portalA n, fg (portalColors !! n)) | n <- [0.. (length portalColors)-1]] 
 
