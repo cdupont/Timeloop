@@ -47,9 +47,9 @@ type Step = Int
 
 data UI = UI {
   initUniv :: Univ,
-  selItem  :: SelItem, -- Which item is selected
-  stepItem :: Step,
-  config   :: Config}   -- Which time step is highlighted
+  selItem  :: Maybe SelItem, -- Which item is selected
+  stepItem :: Step,          -- A time step counter
+  config   :: Config}   
   deriving (Generic)
 
 data Config = Config {
@@ -85,8 +85,8 @@ drawUI (UI u sel st conf)= [center (drawConfigPanel u sel) <+> border (str help)
                        <=> (if showSols conf then drawSearchPanel u st conf else emptyWidget)]
 
 -- Display the top panel for configuring the universe.
-drawConfigPanel :: Univ -> SelItem -> Widget ()
-drawConfigPanel u sel = borderWithLabel (str " Universe setup ") $ drawItemMap (getItemsUniv u (Just sel) Nothing) lims 
+drawConfigPanel :: Univ -> Maybe SelItem -> Widget ()
+drawConfigPanel u sel = borderWithLabel (str " Universe setup ") $ drawItemMap (getItemsUniv u sel Nothing) lims 
 
 -- Display the various solutions
 drawSearchPanel :: Univ -> Step -> Config -> Widget ()
@@ -196,12 +196,15 @@ changeTime' True  (PTD p t d) = PTD p (t+1) d
 changeTime' False (PTD p t d) = PTD p (t-1) d
 
 changeItem :: UI -> UI
-changeItem ui@(UI u s _ _) = ui {selItem = sel} where 
-  sel = case dropWhile (/=s) (getSels u) of
-          [] -> head $ getSels u
-          [s1] -> head $ getSels u
-          s1:s2:_ -> s2
-  
+changeItem ui@(UI u s _ _) = ui {selItem = nextSel (getSels u) s} 
+ 
+nextSel :: (Eq a) => [a] -> Maybe a -> Maybe a
+nextSel [] _ = Nothing
+nextSel as Nothing = Just $ head as
+nextSel as (Just a) = case dropWhile (/=a) as of
+  [] -> Nothing
+  [_] -> Just $ head as
+  _:b:_ -> Just b where 
 
 getSels :: Univ -> [SelItem]
 getSels (Univ ps es cs) = portals ++ entries ++ exits where
@@ -219,20 +222,20 @@ delItem :: UI -> UI
 delItem = changeItem . delItem'
 
 delItem' :: UI -> UI
-delItem' ui@(UI _ (SelItem EntryPortal i) _ _) =  over (#initUniv % #portals) (deleteAt i) ui 
-delItem' ui@(UI _ (SelItem ExitPortal i) _ _) =  over (#initUniv % #portals) (deleteAt i) ui 
-delItem' ui@(UI _ (SelItem Entry i) _ _) =  over (#initUniv % #emitters) (deleteAt i) ui 
-delItem' ui@(UI _ (SelItem Exit i) _ _) =  over (#initUniv % #consumers) (deleteAt i) ui 
+delItem' ui@(UI _ (Just (SelItem EntryPortal i)) _ _) = over (#initUniv % #portals) (deleteAt i) ui 
+delItem' ui@(UI _ (Just (SelItem ExitPortal i)) _ _) =  over (#initUniv % #portals) (deleteAt i) ui 
+delItem' ui@(UI _ (Just (SelItem Entry i)) _ _) =  over (#initUniv % #emitters) (deleteAt i) ui 
+delItem' ui@(UI _ (Just (SelItem Exit i)) _ _) =  over (#initUniv % #consumers) (deleteAt i) ui 
 delItem' ui = ui
 
 deleteAt i xs = ls ++ rs
   where (ls, _:rs) = splitAt i xs
 
 updateUI :: (PTD -> PTD) -> UI -> UI
-updateUI f ui@(UI _ (SelItem EntryPortal i) _ _) = over (#initUniv % #portals % ix i % #entry) f ui
-updateUI f ui@(UI _ (SelItem ExitPortal i) _ _)  = over (#initUniv % #portals % ix i % #exit)  f ui
-updateUI f ui@(UI _ (SelItem Entry i) _ _)       = over (#initUniv % #emitters % ix i) f ui
-updateUI f ui@(UI _ (SelItem Exit i) _ _)        = over (#initUniv % #consumers % ix i) f ui
+updateUI f ui@(UI _ (Just (SelItem EntryPortal i)) _ _) = over (#initUniv % #portals % ix i % #entry) f ui
+updateUI f ui@(UI _ (Just (SelItem ExitPortal i)) _ _)  = over (#initUniv % #portals % ix i % #exit)  f ui
+updateUI f ui@(UI _ (Just (SelItem Entry i)) _ _)       = over (#initUniv % #emitters % ix i) f ui
+updateUI f ui@(UI _ (Just (SelItem Exit i)) _ _)        = over (#initUniv % #consumers % ix i) f ui
 updateUI f ui = ui
 
 increaseStep :: UI -> UI
@@ -273,7 +276,7 @@ help = "Keyboard arrows: move selected item\n" ++
        "\'+/-\': increase/decrease time\n" ++
        "Space: change selected item\n" ++
        "Enter: Show/Hide solutions\n" ++
-       "\'a/d\': add/delete items"
+       "\'n/d\': add new/delete items"
 
 encouragement :: Bool -> Int -> String
 encouragement False _ = "Press Enter when you are ready."
