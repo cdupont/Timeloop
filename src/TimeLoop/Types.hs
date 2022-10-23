@@ -20,34 +20,39 @@ type Time = Int
 data Pos = Pos {
   x :: Int,
   y :: Int}
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generic)
 
 data PTD = PTD {
   pos  :: Pos,
   time :: Time,
   dir  :: Dir}
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Generic)
 
 instance Show PTD where
   show (PTD (Pos x y) t d) = show x ++ ", " ++ show y ++ ", " ++ show t ++ " " ++ (show d)
 
 -- An Walker is a particle with a position, a time and a direction.
-type Walker = PTD
-type Exit = PTD
-type Entry = PTD
+newtype Walker = Walker {unWalker :: PTD}
+  deriving (Eq, Ord, Show, Generic)
+
+newtype Source = Source {unSource :: PTD}
+  deriving (Eq, Ord, Show, Generic)
+
+newtype Sink = Sink {unSink :: PTD}
+  deriving (Eq, Ord, Show, Generic)
 
 -- A portal links two points in space, at specific times and directions.
 data Portal = Portal {
-  entry :: Entry,
-  exit  :: Exit}
+  entry :: Sink,
+  exit  :: Source}
   deriving (Eq, Ord, Show, Generic)
 
 -- A Univers contains some portals linking distant points in the spacetime block.
 -- It also contains emitters and consumers which are point emitting or consuming one walker.
 data Univ = Univ {
   portals :: [Portal],
-  emitters :: [Exit],
-  consumers :: [Entry]}
+  emitters :: [Source],
+  consumers :: [Sink]}
   deriving (Eq, Ord, Show, Generic)
 
 -- A STBlock is infinite and flat spacetime block universe.
@@ -64,30 +69,33 @@ maxStep = 10
 
 --  sample data *
 
-initPos :: PTD
-initPos = PTD (Pos 0 0) 0 E
+initPos :: Source
+initPos = Source (PTD (Pos 0 0) 0 E)
+
+walker1 :: Walker 
+walker1 = Walker (PTD (Pos 0 0) 0 E)
 
 portal1 :: Portal
-portal1 = Portal (PTD (Pos 0 0) 0 S) (PTD (Pos 1 0) 1 W)
+portal1 = Portal (Sink (PTD (Pos 0 0) 0 S)) (Source (PTD (Pos 1 0) 1 W))
 
 --Entrance portal below, exit in front
 --two solutions: going straight or goign through portal
 univ1 :: Univ
 univ1 = Univ
-  [Portal (PTD (Pos 3 (-3)) 6 S) (PTD (Pos 6 0) 0 W)]
-  [PTD (Pos 0 0) 0 E]
+  [Portal (Sink (PTD (Pos 3 (-3)) 6 S)) (Source (PTD (Pos 6 0) 0 W))]
+  [Source (PTD (Pos 0 0) 0 E)]
   []
 
 --One solution: going through portal (self-rightning solution)
 univ2 :: Univ
 univ2 = Univ
-  [Portal (PTD (Pos 2 0) 2 E) (PTD (Pos 1 (-1)) 0 N)]
-  [PTD (Pos 0 0) 0 E]
+  [Portal (Sink (PTD (Pos 2 0) 2 E)) (Source (PTD (Pos 1 (-1)) 0 N))]
+  [Source (PTD (Pos 0 0) 0 E)]
   []
 
 --No solution (self deviating)
 univ3 :: Univ
 univ3 = Univ
-  [Portal (PTD (Pos 2 0) 2 E) (PTD (Pos 1 1) 0 S)]
-  [PTD (Pos 0 0) 0 E]
+  [Portal (Sink (PTD (Pos 2 0) 2 E)) (Source (PTD (Pos 1 1) 0 S))]
+  [Source (PTD (Pos 0 0) 0 E)]
   []

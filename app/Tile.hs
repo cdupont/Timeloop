@@ -15,7 +15,7 @@ tilePortal in_ dir time =
   n = if side == N then showArr dir else "──" 
   s = if side == S then showArr dir else "──" 
   c = printf "%2d" time
-  side = if in_ then turn' Back dir else dir 
+  side = if in_ then turnRel Back dir else dir 
 
 tileWalker :: Dir -> Time -> String
 tileWalker = tileArr showArr  
@@ -71,8 +71,8 @@ showToBarArr S = "⤓ "
 
 -- Get the collision arrow given your own direction 
 getArrLoc :: Dir -> (Dir, Dir) -> String
-getArrLoc d (d1, d2)  | d == d1 = getAngleArr (d, turn' Right_ d) 
-getArrLoc d (d1, d2)  | d == d2 = getAngleArr (d, turn' Right_ d) 
+getArrLoc d (d1, d2)  | d == d1 = getAngleArr (d, turnRel Right_ d) 
+getArrLoc d (d1, d2)  | d == d2 = getAngleArr (d, turnRel Right_ d) 
 getArrLoc _  _ = "  "
 
 getAngleArr :: (Dir, Dir) -> String

@@ -24,7 +24,7 @@ import Optics.Label
 import GHC.Generics (Generic)
 import Tile
 
-data ItemType = EntryPortal | ExitPortal | Entry | Exit | Walker
+data ItemType = EntryPortal | ExitPortal | Entry | Exit | Walker_
   deriving (Eq, Ord, Show)
 
 data Item = Item {
@@ -90,25 +90,28 @@ drawConfigPanel u sel = borderWithLabel (str " Universe setup ") $ drawItemMap (
 
 -- Display the various solutions
 drawSearchPanel :: Univ -> Step -> Config -> Widget ()
-drawSearchPanel u st conf = hBox $ goodBlocks ++ badBlocks where
-  goodBlocks = zipWith (\b i -> overrideAttr borderAttr borderGood $ drawBlock (" Solution n." ++ show i ++ " ") b) gbs [1..]
-  badBlocks = if showWrongTrajs conf then map (overrideAttr borderAttr borderBad . drawBlock "") bbs else [emptyWidget] 
-  drawBlock label block = borderWithLabel (str label) $ drawItemMap (getItemMap block Nothing (Just st)) lims
-  (gbs, bbs) = partition isValidBlock $ getAllSTBlocks u
+drawSearchPanel u st conf = hBox $ if showWrongTrajs conf then showAllSols else showGoodSols where
+  showGoodSols = zipWith (\b i -> showSol b (" Solution n." ++ show i ++ " ") True st) (filter isValidBlock $ getAllSTBlocks u) [1..]
+  showAllSols = map (\b -> showSol b "" (isValidBlock b) st) $ getAllSTBlocks u
 
+showSol :: STBlock -> String -> Bool -> Step -> Widget ()
+showSol block msg isGood step = overrideAttr borderAttr (if isGood then borderGood else borderBad) $ drawBlock msg block step
+
+drawBlock :: String -> STBlock -> Step -> Widget ()
+drawBlock label block step = borderWithLabel (str label) $ drawItemMap (getItemMap block Nothing (Just step)) lims
 
 -- Get the various items in a Block as a Map
 getItemMap :: STBlock -> Maybe SelItem -> Maybe Step -> ItemMap
 getItemMap (STBlock u ws) sel st = M.map (sortBy $ timePrio st) $ M.unionWith (++) (getItemsUniv u sel st) walkers where
-  walkers = M.fromListWith (++) $ map (\(PTD p t d) -> (p, [Item Walker t d Nothing (highlighted t st) Nothing])) ws 
+  walkers = M.fromListWith (++) $ map (\(Walker (PTD p t d)) -> (p, [Item Walker_ t d Nothing (highlighted t st) Nothing])) ws 
 
 -- Get the various items in Univ 
 getItemsUniv :: Univ -> Maybe SelItem -> Maybe Step -> ItemMap
 getItemsUniv (Univ ps es cs) sel st = M.fromListWith (++) (entries ++ exits ++ portalEntries ++ portalExits) where
-  entries       = zipWith (\(PTD p t d) i            -> (p, [Item Entry       t d (selected sel Entry i)       (highlighted t st) Nothing])) es [0..]
-  exits         = zipWith (\(PTD p t d) i            -> (p, [Item Exit        t d (selected sel Exit i)        (highlighted t st) Nothing])) cs [0..]
-  portalEntries = zipWith (\(Portal (PTD p t d) _) i -> (p, [Item EntryPortal t d (selected sel EntryPortal i) (highlighted t st) (Just i)])) ps [0..]
-  portalExits   = zipWith (\(Portal _ (PTD p t d)) i -> (p, [Item ExitPortal  t d (selected sel ExitPortal i)  (highlighted t st) (Just i)])) ps [0..]
+  entries       = zipWith (\(Source (PTD p t d)) i            -> (p, [Item Entry       t d (selected sel Entry i)       (highlighted t st) Nothing])) es [0..]
+  exits         = zipWith (\(Sink (PTD p t d)) i              -> (p, [Item Exit        t d (selected sel Exit i)        (highlighted t st) Nothing])) cs [0..]
+  portalEntries = zipWith (\(Portal (Sink (PTD p t d)) _) i   -> (p, [Item EntryPortal t d (selected sel EntryPortal i) (highlighted t st) (Just i)])) ps [0..]
+  portalExits   = zipWith (\(Portal _ (Source (PTD p t d))) i -> (p, [Item ExitPortal  t d (selected sel ExitPortal i)  (highlighted t st) (Just i)])) ps [0..]
 
 -- Highlight items that on the current timestep
 highlighted t (Just st') = Just $ (st' `div` 10 `mod` maxStep) == t
@@ -143,8 +146,8 @@ drawTile ((Item EntryPortal t d sel high pair) : _)                             
 drawTile ((Item ExitPortal t d sel high pair) : _)                                      = setAttr sel high pair $ str $ tilePortal False d t 
 drawTile ((Item Entry t d sel high pair) : _)                                           = setAttr sel high pair $ str $ tileEntry d t
 drawTile ((Item Exit t d sel high pair) : _)                                            = setAttr sel high pair $ str $ tileExit d t
-drawTile ((Item Walker t1 d1 sel high pair) : (Item Walker t2 d2 _ _ _) : _) | t1 == t2 = setAttr sel high pair $ str $ tileCollision d1 d2 t1
-drawTile ((Item Walker t d sel high pair) : _)                                          = setAttr sel high pair $ str $ tileWalker d t
+drawTile ((Item Walker_ t1 d1 sel high pair) : (Item Walker_ t2 d2 _ _ _) : _) | t1 == t2 = setAttr sel high pair $ str $ tileCollision d1 d2 t1
+drawTile ((Item Walker_ t d sel high pair) : _)                                          = setAttr sel high pair $ str $ tileWalker d t
 
 setAttr :: Maybe Bool -> Maybe Bool -> Maybe Int -> Widget () -> Widget () 
 setAttr sel high pair = withDefAttr (pairAttr pair) . withDefAttr (selectAttr sel) . withDefAttr (dimAttr high) where
@@ -168,7 +171,8 @@ handleEvent (VtyEvent (V.EvKey (V.KChar 'r') [])) = modify rotate
 handleEvent (VtyEvent (V.EvKey (V.KChar '+') [])) = modify $ changeTime True 
 handleEvent (VtyEvent (V.EvKey (V.KChar '-') [])) = modify $ changeTime False
 handleEvent (VtyEvent (V.EvKey (V.KChar ' ') [])) = modify changeItem
-handleEvent (VtyEvent (V.EvKey (V.KChar 'n') [])) = modify addItem
+handleEvent (VtyEvent (V.EvKey (V.KChar 'p') [])) = modify addPortal
+handleEvent (VtyEvent (V.EvKey (V.KChar 'e') [])) = modify addEmmiter
 handleEvent (VtyEvent (V.EvKey (V.KChar 'd') [])) = modify delItem 
 handleEvent (VtyEvent (V.EvKey V.KEnter      [])) = modify showSolutions 
 handleEvent (VtyEvent (V.EvKey (V.KChar 'w') [])) = modify showWrongTrajectories 
@@ -186,7 +190,7 @@ movePos E (PTD (Pos x y) t d) = PTD (Pos (x+1) y) t d
 movePos W (PTD (Pos x y) t d) = PTD (Pos (x-1) y) t d 
 
 rotate :: UI -> UI
-rotate = updateUI (turn Right_)
+rotate = updateUI (turn' Right_)
 
 changeTime :: Bool -> UI -> UI
 changeTime b = updateUI (changeTime' b)
@@ -212,11 +216,11 @@ getSels (Univ ps es cs) = portals ++ entries ++ exits where
   entries = map (SelItem Entry) [0..length es-1]
   exits = map (SelItem Exit) [0..length cs-1]
 
-addItem :: UI -> UI
-addItem = changeItem . addItem'
+addPortal :: UI -> UI
+addPortal ui = changeItem $ over (#initUniv % #portals) (++ [portal1]) ui
 
-addItem' :: UI -> UI
-addItem' =  over (#initUniv % #portals) (++ [portal1]) 
+addEmmiter :: UI -> UI
+addEmmiter ui = changeItem $ over (#initUniv % #emitters) (++ [initPos]) ui
 
 delItem :: UI -> UI
 delItem = changeItem . delItem'
@@ -232,10 +236,10 @@ deleteAt i xs = ls ++ rs
   where (ls, _:rs) = splitAt i xs
 
 updateUI :: (PTD -> PTD) -> UI -> UI
-updateUI f ui@(UI _ (Just (SelItem EntryPortal i)) _ _) = over (#initUniv % #portals % ix i % #entry) f ui
-updateUI f ui@(UI _ (Just (SelItem ExitPortal i)) _ _)  = over (#initUniv % #portals % ix i % #exit)  f ui
-updateUI f ui@(UI _ (Just (SelItem Entry i)) _ _)       = over (#initUniv % #emitters % ix i) f ui
-updateUI f ui@(UI _ (Just (SelItem Exit i)) _ _)        = over (#initUniv % #consumers % ix i) f ui
+updateUI f ui@(UI _ (Just (SelItem EntryPortal i)) _ _) = over (#initUniv % #portals % ix i % #entry % #unSink) f ui
+updateUI f ui@(UI _ (Just (SelItem ExitPortal i)) _ _)  = over (#initUniv % #portals % ix i % #exit % #unSource) f ui
+updateUI f ui@(UI _ (Just (SelItem Entry i)) _ _)       = over (#initUniv % #emitters % ix i % #unSource) f ui
+updateUI f ui@(UI _ (Just (SelItem Exit i)) _ _)        = over (#initUniv % #consumers % ix i % #unSink) f ui
 updateUI f ui = ui
 
 increaseStep :: UI -> UI
