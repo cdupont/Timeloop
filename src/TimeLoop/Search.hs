@@ -3,6 +3,7 @@ module TimeLoop.Search where
 import Prelude hiding (Left, Right)
 import Data.List
 import Data.Ord
+import Data.Function
 import Data.Maybe (listToMaybe, catMaybes)
 import Control.Applicative
 import Control.Monad
@@ -38,15 +39,21 @@ getTimeline emitters consumers = listArray (0, maxStep) $ map getIOT [0..maxStep
 getAllWalkers :: Array Time ([Source], [Sink]) -> Array Time [Walker]
 getAllWalkers timeline = snd $ mapAccumL getNextStep [] timeline
 
--- Move the walkers one step. Some new walkers can appear (from exits).
--- some walkers can disappear (in entries).
+-- Move the walkers one step.
+-- All walkers, sources, sinks should be from the same time frame. 
 getNextStep :: [Walker] -> ([Source], [Sink]) -> ([Walker], [Walker])
-getNextStep ws (sources, sinks) = (concatMap move $ posGroups $ (ws ++ emitted) \\ consummed,   -- Will be used by mapAccumL as input for the next step 
-                                   ws ++ emitted)                                               -- Will be stored by mapAccumL in the final array
+getNextStep ws (sources, sinks) =
+  -- We move all walkers on step. New walkers appears on the sources. Walkers that are on a Sink are removed.
+  -- This will be used by mapAccumL as input for the next step 
+  (concatMap move $ posGroups $ (ws ++ emitted) \\ consummed,  
+  -- We store the current walkers, together with the new walkers appearing at the sources.
+  -- This will be stored by mapAccumL in the final array
+  ws ++ emitted)                                               
   where
-  posGroups as = groupBy (\(Walker (PTD p1 t1 _)) (Walker (PTD p2 t2 _)) -> p1 == p2 && t1 == t2) as
+  posGroups as = groupBy ((==) `on` position) $ sortOn position  as
   consummed = map (Walker . unSink) sinks
   emitted = map (Walker . unSource) sources
+  position (Walker (PTD p _ _)) = p
 
 -- A Universe is valid when a walker that enters a portal, also exits it. 
 isValidBlock :: STBlock -> Bool

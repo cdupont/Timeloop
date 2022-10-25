@@ -69,11 +69,26 @@ maxStep = 10
 
 --  sample data *
 
-initPos :: Source
-initPos = Source (PTD (Pos 0 0) 0 E)
+initSource :: Source
+initSource = Source (PTD (Pos 0 0) 0 E)
+
+source1 :: Source
+source1 = Source (PTD (Pos 1 (-1)) 0 N)
+
+source2 :: Source
+source2 = Source (PTD (Pos 0 3) 0 E)
+
+sink1 :: Sink
+sink1 = Sink (PTD (Pos 5 0) 5 E)
 
 walker1 :: Walker 
 walker1 = Walker (PTD (Pos 0 0) 0 E)
+
+walker2 :: Walker 
+walker2 = Walker (PTD (Pos 0 0) 0 N)
+
+walker3 :: Walker 
+walker3 = Walker (PTD (Pos 5 5) 0 N)
 
 portal1 :: Portal
 portal1 = Portal (Sink (PTD (Pos 0 0) 0 S)) (Source (PTD (Pos 1 0) 1 W))

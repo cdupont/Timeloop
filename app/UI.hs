@@ -220,7 +220,7 @@ addPortal :: UI -> UI
 addPortal ui = changeItem $ over (#initUniv % #portals) (++ [portal1]) ui
 
 addEmmiter :: UI -> UI
-addEmmiter ui = changeItem $ over (#initUniv % #emitters) (++ [initPos]) ui
+addEmmiter ui = changeItem $ over (#initUniv % #emitters) (++ [initSource]) ui
 
 delItem :: UI -> UI
 delItem = changeItem . delItem'
@@ -280,7 +280,9 @@ help = "Keyboard arrows: move selected item\n" ++
        "\'+/-\': increase/decrease time\n" ++
        "Space: change selected item\n" ++
        "Enter: Show/Hide solutions\n" ++
-       "\'n/d\': add new/delete items"
+       "\'p\': add portal\n" ++
+       "\'e\': add emitter\n" ++
+       "\'d\': delete item\n"
 
 encouragement :: Bool -> Int -> String
 encouragement False _ = "Press Enter when you are ready."
