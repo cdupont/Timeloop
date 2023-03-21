@@ -29,7 +29,3 @@ Launch:
 ```
 timetravel
 ```
-
-> **Warning**
->
-> This is a warning
