@@ -25,7 +25,7 @@ The emitter will emit a "walker", here at time step 0.
 The walkers always walk straight, except when they collides with another walker. 
 When a walker collide with another walker, they always turn right (as a rule).
 If the walker enters the entry portal at the right time, it will walk out the of the exit portal at the mentioned time.
-
+   
 ![start](img/start.png)
 
 You can move the various elements of the universe (emitter and portals), and add more of them.
