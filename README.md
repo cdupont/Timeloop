@@ -33,7 +33,7 @@ You can move the various elements of the universe, such as emitter and portals, 
 
 ![whole](img/whole.gif)
 
-In this universe setup, there are 2 possible trajectories for the character:   
+In this universe setup, there are 2 possible trajectories for the walker:   
 The first solution is simple: he just goes straight. At step 6, he will walk over the exit portal (this has no effects).
 
 ![sol1](img/sol1.gif)
