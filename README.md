@@ -44,4 +44,5 @@ At the start of the simulation (highlighted as step 0), another walker appears i
 ![sol2](img/sol2.gif)
 
 You can play around with different universe setups, and generate interresting configurations such as paradoxes, "Djinns" and more.
+You can load examples using the number keys.   
 Have fun!
