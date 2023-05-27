@@ -19,9 +19,10 @@ timetravel
 How to play
 ===========
 
-You start by setting up the universe.
+You start by setting up the universe, and them running the simulation.
 In the picture bellow, there is an "emitter" on the left and two time portals: an entry portal, and an exit portal.
-The emitter will emit a "walker" that always walk straight, except when it collides with another walker. 
+The emitter will emit a "walker", here at time step 0.
+The walkers always walk straight, except when they collides with another walker. 
 When a walker collide with another walker, they always turn right (as a rule).
 If the walker enters the entry portal at the right time, it will walk out the of the exit portal at the mentioned time.
 
