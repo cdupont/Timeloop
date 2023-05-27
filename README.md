@@ -39,7 +39,7 @@ The first solution is simple: he just goes straight. At step 6, he will walk ove
 ![sol1](img/sol1.gif)
 
 However, there is another solution!   
-At the start of the simulation (step 0), another walker appears in the exit portal: it's you from the future! Both goes straight some steps, meeting in the middle. Then, as per the rule on collisions, both turn right. The initial walker enters the portal at step 6, thus closing the loop. The second walker continues toward the top.
+At the start of the simulation (highlighted as step 0), another walker appears in the exit portal: it's you from the future! Both goes straight some steps, meeting in the middle. Then, as per the rule on collisions, both turn right. The initial walker enters the portal at step 6, thus closing the loop. The second walker continues toward the top.
 
 ![sol2](img/sol2.gif)
 
