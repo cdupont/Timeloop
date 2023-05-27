@@ -30,15 +30,15 @@ If the walker enters the entry portal at the right time, it will walk out the of
 You can move the various elements of the universe (emitter and portals), and add more of them.
 When you are ready, hit Enter.
 
-![whole](img/whole.png)
+![whole](img/whole.gif)
 
 In this scenario, there are 2 possible trajectories for the character:
 1. He just goes straight and passes between the two portals. No problem.
 
-![sol1](img/sol1.png)
+![sol1](img/sol1.gif)
 
 2. At the start of the simulation, another character appears in the exit portal: it's you from the future! Both goes straight one step, meeting in the middle. Then, as per the rule on collisions, both turn right. The initial character enters the portal at step 2, thus closing the loop. The second character continues toward the left.
 
-![sol2](img/sol2.png)
+![sol2](img/sol2.gif)
 
 
