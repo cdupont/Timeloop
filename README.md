@@ -28,8 +28,8 @@ If the walker enters the entry portal at the right time, it will walk out the of
    
 ![start](img/start.png)
 
-You can move the various elements of the universe (emitter and portals), and add more of them.   
-When you are ready, hit Enter.
+You can move the various elements of the universe, such as emitter and portals, and add more of them (see the instructions).   
+**When you are ready, hit Enter.**
 
 ![whole](img/whole.gif)
 
