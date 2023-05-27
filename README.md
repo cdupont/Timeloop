@@ -33,12 +33,13 @@ When you are ready, hit Enter.
 
 ![whole](img/whole.gif)
 
-In this scenario, there are 2 possible trajectories for the character:
-1. He just goes straight and passes between the two portals. No problem.
+In this universe setup, there are 2 possible trajectories for the character:   
+The first solution is simple: he just goes straight. At step 6, he will walk over the exit portal (this has no effects).
 
 ![sol1](img/sol1.gif)
 
-2. At the start of the simulation, another character appears in the exit portal: it's you from the future! Both goes straight one step, meeting in the middle. Then, as per the rule on collisions, both turn right. The initial character enters the portal at step 2, thus closing the loop. The second character continues toward the left.
+However, there is another solution!   
+At the start of the simulation, another walker appears in the exit portal: it's you from the future! Both goes straight some steps, meeting in the middle. Then, as per the rule on collisions, both turn right. The initial walker enters the portal at step 6, thus closing the loop. The second walker continues toward the top.
 
 ![sol2](img/sol2.gif)
 
