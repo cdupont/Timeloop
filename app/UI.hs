@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module UI where
 
@@ -23,6 +24,7 @@ import Optics
 import Optics.Label
 import GHC.Generics (Generic)
 import Tile
+import Control.Monad.IO.Class
 
 data ItemType = EntryPortal | ExitPortal | Entry | Exit | Walker_
   deriving (Eq, Ord, Show)
@@ -80,7 +82,7 @@ lims = ((-1, -3), (7, 3))
 
 -- Display the whole interface
 drawUI :: UI -> [Widget ()]
-drawUI (UI u sel st conf)= [center (drawConfigPanel u sel) <+> border (str help)
+drawUI (UI u sel st conf)= [center (drawConfigPanel u sel) <+> borderWithLabel (str "Instructions") (padAll 1 $ str help)
                        <=> (str $ encouragement (showSols conf) (length $ getValidSTBlocks u))
                        <=> (if showSols conf then drawSearchPanel u st conf else emptyWidget)]
 
@@ -176,9 +178,19 @@ handleEvent (VtyEvent (V.EvKey (V.KChar 'e') [])) = modify addEmmiter
 handleEvent (VtyEvent (V.EvKey (V.KChar 'd') [])) = modify delItem 
 handleEvent (VtyEvent (V.EvKey V.KEnter      [])) = modify showSolutions 
 handleEvent (VtyEvent (V.EvKey (V.KChar 'w') [])) = modify showWrongTrajectories 
+handleEvent (VtyEvent (V.EvKey (V.KChar '1') [])) = modify $ solution univ1
+handleEvent (VtyEvent (V.EvKey (V.KChar '2') [])) = modify $ solution univ2
+handleEvent (VtyEvent (V.EvKey (V.KChar '3') [])) = modify $ solution univ3
+handleEvent (VtyEvent (V.EvKey (V.KChar '4') [])) = modify $ solution univ4
+handleEvent (VtyEvent (V.EvKey (V.KChar '5') [])) = modify $ solution univ5
+handleEvent (VtyEvent (V.EvKey (V.KChar '6') [])) = modify $ solution univ6
+handleEvent (VtyEvent (V.EvKey (V.KChar '7') [])) = modify $ solution univ7
 handleEvent (AppEvent Tick                      ) = modify increaseStep
 handleEvent _ = return ()
 
+
+solution :: Univ -> UI -> UI
+solution u ui = set #initUniv u ui
 
 move' :: Dir -> UI -> UI
 move' d = updateUI (movePos d)
@@ -282,7 +294,17 @@ help = "Keyboard arrows: move selected item\n" ++
        "Enter: Show/Hide solutions\n" ++
        "\'p\': add portal\n" ++
        "\'e\': add emitter\n" ++
-       "\'d\': delete item\n"
+       "\'d\': delete item\n" ++
+       "---------------------\n" ++
+       "Load examples:\n" ++
+       "\'1\': The Paradox\n" ++
+       "\'2\': Self-rightening solution\n" ++
+       "\'3\': The Djinn\n" ++
+       "\'4\': Djinn deviation\n" ++
+       "\'5\': The Northern Cross\n" ++
+       "\'6\': Kill one solution with Paradox\n" ++
+       "\'7\': 4 solutions\n"
+
 
 encouragement :: Bool -> Int -> String
 encouragement False _ = "Press Enter when you are ready."

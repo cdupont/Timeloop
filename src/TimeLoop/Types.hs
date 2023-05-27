@@ -26,10 +26,10 @@ data PTD = PTD {
   pos  :: Pos,
   time :: Time,
   dir  :: Dir}
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord, Show, Generic)
 
-instance Show PTD where
-  show (PTD (Pos x y) t d) = show x ++ ", " ++ show y ++ ", " ++ show t ++ " " ++ (show d)
+--instance Show PTD where
+--  show (PTD (Pos x y) t d) = show x ++ ", " ++ show y ++ ", " ++ show t ++ " " ++ (show d)
 
 -- An Walker is a particle with a position, a time and a direction.
 newtype Walker = Walker {unWalker :: PTD}
@@ -93,24 +93,34 @@ walker3 = Walker (PTD (Pos 5 5) 0 N)
 portal1 :: Portal
 portal1 = Portal (Sink (PTD (Pos 0 0) 0 S)) (Source (PTD (Pos 1 0) 1 W))
 
---Entrance portal below, exit in front
---two solutions: going straight or goign through portal
+--No solution (self deviating)
 univ1 :: Univ
-univ1 = Univ
+univ1 = Univ {portals = [Portal {entry = Sink {unSink = PTD {pos = Pos {x = 6, y = 0}, time = 6, dir = E}}, exit = Source {unSource = PTD {pos = Pos {x = 3, y = 3}, time = 0, dir = S}}}], emitters = [Source {unSource = PTD {pos = Pos {x = 0, y = 0}, time = 0, dir = E}}], consumers = []}
+
+--two solutions: going straight or going through portal
+univ2 :: Univ
+univ2 = Univ
   [Portal (Sink (PTD (Pos 3 (-3)) 6 S)) (Source (PTD (Pos 6 0) 0 W))]
   [Source (PTD (Pos 0 0) 0 E)]
   []
 
---One solution: going through portal (self-rightning solution)
-univ2 :: Univ
-univ2 = Univ
-  [Portal (Sink (PTD (Pos 2 0) 2 E)) (Source (PTD (Pos 1 (-1)) 0 N))]
-  [Source (PTD (Pos 0 0) 0 E)]
-  []
-
---No solution (self deviating)
+-- The Djinn
 univ3 :: Univ
-univ3 = Univ
-  [Portal (Sink (PTD (Pos 2 0) 2 E)) (Source (PTD (Pos 1 1) 0 S))]
-  [Source (PTD (Pos 0 0) 0 E)]
-  []
+univ3 = Univ {portals = [Portal {entry = Sink {unSink = PTD {pos = Pos {x = 6, y = 0}, time = 6, dir = E}}, exit = Source {unSource = PTD {pos = Pos {x = 0, y = 0}, time = 0, dir = E}}}], emitters = [], consumers = []}
+
+--One solution: Deviate a Djinn 
+univ4 :: Univ
+univ4 = Univ {portals = [Portal {entry = Sink {unSink = PTD {pos = Pos {x = 6, y = 0}, time = 6, dir = E}}, exit = Source {unSource = PTD {pos = Pos {x = 3, y = -3}, time = 0, dir = N}}}], emitters = [Source {unSource = PTD {pos = Pos {x = 0, y = 0}, time = 0, dir = E}}], consumers = []}
+
+-- The northern cross
+univ5 :: Univ
+univ5 = Univ {portals = [Portal {entry = Sink {unSink = PTD {pos = Pos {x = 3, y = -3}, time = 6, dir = S}}, exit = Source {unSource = PTD {pos = Pos {x = 6, y = 0}, time = 0, dir = W}}},Portal {entry = Sink {unSink = PTD {pos = Pos {x = 3, y = 3}, time = 6, dir = N}}, exit = Source {unSource = PTD {pos = Pos {x = 0, y = 0}, time = 0, dir = E}}}], emitters = [], consumers = []}
+
+-- Kill one solution
+univ6 :: Univ
+univ6 = Univ {portals = [Portal {entry = Sink {unSink = PTD {pos = Pos {x = 3, y = -3}, time = 6, dir = S}}, exit = Source {unSource = PTD {pos = Pos {x = 6, y = 0}, time = 0, dir = W}}},Portal {entry = Sink {unSink = PTD {pos = Pos {x = 3, y = 3}, time = 6, dir = N}}, exit = Source {unSource = PTD {pos = Pos {x = 1, y = 2}, time = 3, dir = E}}}], emitters = [Source {unSource = PTD {pos = Pos {x = 0, y = 0}, time = 0, dir = E}}], consumers = []}
+
+-- 4 solutions
+univ7 :: Univ
+univ7 = Univ {portals = [Portal {entry = Sink {unSink = PTD {pos = Pos {x = 3, y = -3}, time = 4, dir = S}}, exit = Source {unSource = PTD {pos = Pos {x = 5, y = -1}, time = 0, dir = W}}},Portal {entry = Sink {unSink = PTD {pos = Pos {x = 5, y = 1}, time = 6, dir = E}}, exit = Source {unSource = PTD {pos = Pos {x = 1, y = 1}, time = 2, dir = E}}}], emitters = [Source {unSource = PTD {pos = Pos {x = 1, y = -1}, time = 0, dir = E}}], consumers = []}
+

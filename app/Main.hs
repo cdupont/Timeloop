@@ -3,6 +3,8 @@
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+
 module Main where
 
 import Options.Applicative.Simple
@@ -30,11 +32,11 @@ main = do
     writeBChan chan Tick
     threadDelay 100000
   putStrLn "Loading"
-  let initState = UI univ1 (Just (SelItem EntryPortal 0)) 0 (Config False False)
+  let initState = UI univ2 (Just (SelItem EntryPortal 0)) 0 (Config False False)
   let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
-  customMain initialVty buildVty (Just chan) app initState
-
+  a <- customMain initialVty buildVty (Just chan) app initState
+  putStrLn $ show a.initUniv
   putStrLn "Goodbye"
 
 
