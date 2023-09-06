@@ -6,12 +6,12 @@ See this [series of blog posts](https://www.corentindupont.info/blog/posts/Cosmo
 
 Install
 =======
-
-run:
+First, you need to [Install  Haskell](https://www.haskell.org/ghcup/).
+Then run:
 ```
 cabal install
 ```
-Launch:
+Launch the demo:
 ```
 timetravel
 ```
