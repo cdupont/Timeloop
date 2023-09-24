@@ -32,8 +32,7 @@ getPortalCombinations ps = subsequences $ map exit ps
 -- Get a list of Sources and Sinks, indexed by their time.
 getTimeline :: [Source] -> [Sink] -> Array Time ([Source], [Sink])
 getTimeline emitters consumers = listArray (0, maxStep) $ map getIOT [0..maxStep] where
-  getIOT t = (filter (\(Source (PTD _ t' _)) -> t == t') emitters, 
-              filter (\(Sink (PTD _ t' _)) -> t == t') consumers) 
+  getIOT t = (filter (\(Source (PTD _ t' _)) -> t == t') emitters, consumers)
 
 -- generate the full universe of walkers from a timeline.
 getAllWalkers :: Array Time ([Source], [Sink]) -> Array Time [Walker]
@@ -45,20 +44,20 @@ getNextStep :: [Walker] -> ([Source], [Sink]) -> ([Walker], [Walker])
 getNextStep ws (sources, sinks) =
   -- We move all walkers on step. New walkers appears on the sources. Walkers that are on a Sink are removed.
   -- This will be used by mapAccumL as input for the next step 
-  (concatMap move $ posGroups $ (ws ++ emitted) \\ consummed,  
+  (concatMap move $ posGroups $ consum (ws ++ emitted),  
   -- We store the current walkers, together with the new walkers appearing at the sources.
   -- This will be stored by mapAccumL in the final array
   ws ++ emitted)                                               
   where
   posGroups as = groupBy ((==) `on` position) $ sortOn position  as
-  consummed = map (Walker . unSink) sinks
+  consum = filter (\(Walker (PTD pos1 _ _)) -> not $ pos1 `elem` map unSink sinks)
   emitted = map (Walker . unSource) sources
   position (Walker (PTD p _ _)) = p
 
 -- A Universe is valid when a walker that enters a portal, also exits it. 
 isValidBlock :: STBlock -> Bool
 isValidBlock (STBlock (Univ ps _ _) ws) = all (isValidPortal ws) ps where
-  isValidPortal ws (Portal (Sink sk) (Source sc)) = (sc `elem` ws') == (sk `elem` ws')
+  isValidPortal ws (Portal (Sink sk) (Source sc)) = (sc `elem` ws') == (sk `elem` (map pos ws'))
   ws' = map unWalker ws
 
 dupe :: a -> (a,a)

@@ -109,10 +109,10 @@ getItemMap (STBlock u ws) sel st = M.map (sortBy $ timePrio st) $ M.unionWith (+
 
 -- Get the various items in Univ 
 getItemsUniv :: Univ -> Maybe SelItem -> Maybe Step -> ItemMap
-getItemsUniv (Univ ps es cs) sel st = M.fromListWith (++) (entries ++ exits ++ portalEntries ++ portalExits) where
+getItemsUniv (Univ ps es cs) sel st = M.fromListWith (++) (entries ++ portalEntries ++ portalExits) where
   entries       = zipWith (\(Source (PTD p t d)) i            -> (p, [Item Entry       t d (selected sel Entry i)       (highlighted t st) Nothing])) es [0..]
-  exits         = zipWith (\(Sink (PTD p t d)) i              -> (p, [Item Exit        t d (selected sel Exit i)        (highlighted t st) Nothing])) cs [0..]
-  portalEntries = zipWith (\(Portal (Sink (PTD p t d)) _) i   -> (p, [Item EntryPortal t d (selected sel EntryPortal i) (highlighted t st) (Just i)])) ps [0..]
+--  exits         = zipWith (\(Sink (PTD p t d)) i              -> (p, [Item Exit        t d (selected sel Exit i)        (highlighted t st) Nothing])) cs [0..]
+  portalEntries = zipWith (\(Portal (Sink p) _) i   -> (p, [Item EntryPortal 0 N (selected sel EntryPortal i) (highlighted 0 st) (Just i)])) ps [0..]
   portalExits   = zipWith (\(Portal _ (Source (PTD p t d))) i -> (p, [Item ExitPortal  t d (selected sel ExitPortal i)  (highlighted t st) (Just i)])) ps [0..]
 
 -- Highlight items that on the current timestep
@@ -248,11 +248,14 @@ deleteAt i xs = ls ++ rs
   where (ls, _:rs) = splitAt i xs
 
 updateUI :: (PTD -> PTD) -> UI -> UI
-updateUI f ui@(UI _ (Just (SelItem EntryPortal i)) _ _) = over (#initUniv % #portals % ix i % #entry % #unSink) f ui
+updateUI f ui@(UI _ (Just (SelItem EntryPortal i)) _ _) = over (#initUniv % #portals % ix i % #entry % #unSink) (toPos f) ui
 updateUI f ui@(UI _ (Just (SelItem ExitPortal i)) _ _)  = over (#initUniv % #portals % ix i % #exit % #unSource) f ui
 updateUI f ui@(UI _ (Just (SelItem Entry i)) _ _)       = over (#initUniv % #emitters % ix i % #unSource) f ui
-updateUI f ui@(UI _ (Just (SelItem Exit i)) _ _)        = over (#initUniv % #consumers % ix i % #unSink) f ui
+updateUI f ui@(UI _ (Just (SelItem Exit i)) _ _)        = over (#initUniv % #consumers % ix i % #unSink) (toPos f) ui
 updateUI f ui = ui
+
+toPos :: (PTD -> PTD) -> (Pos -> Pos)
+toPos f p = pos $ f (PTD p 0 N)
 
 increaseStep :: UI -> UI
 increaseStep (UI ps s st c)  = UI ps s (st+1) c
