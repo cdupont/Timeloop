@@ -1,3 +1,4 @@
 # Changelog for timetravel
 
-## Unreleased changes
+## V1.0
+First release.
