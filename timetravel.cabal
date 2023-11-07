@@ -53,6 +53,7 @@ executable timetravel
     , brick == 2.1
     , split
     , vty == 6.0
+    , vty-crossplatform
     , containers
     , optics
     , timetravel

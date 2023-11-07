@@ -14,6 +14,7 @@ import TimeLoop.Types
 import TimeLoop.Search
 import Brick.BChan
 import qualified Graphics.Vty as V
+import qualified Graphics.Vty.CrossPlatform as VCP
 import Control.Concurrent (threadDelay, forkIO)
 import Control.Monad (void, forever)
 
@@ -33,7 +34,7 @@ main = do
     threadDelay 100000
   putStrLn "Loading"
   let initState = UI univ2 (Just (SelItem EntryPortal 0)) 0 (Config False False)
-  let buildVty = V.mkVty V.defaultConfig
+  let buildVty = VCP.mkVty V.defaultConfig
   initialVty <- buildVty
   a <- customMain initialVty buildVty (Just chan) app initState
   putStrLn $ show a.initUniv

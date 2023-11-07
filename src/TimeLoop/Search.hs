@@ -9,7 +9,6 @@ import Control.Applicative
 import Control.Monad
 import TimeLoop.Types
 import TimeLoop.Walker
-import Control.Monad.WeightedSearch as W
 import Data.Array
 import Control.Scanl
 import Control.Monad.State
