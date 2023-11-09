@@ -6,8 +6,10 @@ See this [series of blog posts](https://www.corentindupont.info/blog/posts/Cosmo
 
 Install
 =======
-First, you need to [Install  Haskell](https://www.haskell.org/ghcup/).
-Then run:
+
+[Download](https://github.com/cdupont/Timeloop/releases/tag/v1.0) one of the binary files from the release, unzip and run it.
+
+Alternatively, you can clone this repo. Then [Install  Haskell](https://www.haskell.org/ghcup/) and run:
 ```
 cabal install
 ```
@@ -15,6 +17,7 @@ Launch the demo:
 ```
 timetravel
 ```
+
 
 How to play
 ===========
